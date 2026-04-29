@@ -1,12 +1,19 @@
-
+import { Dashboard } from '../components/layout/Dashboard';
+import { useBackground } from '../hooks/useBackground';
 
 const App = () => {
+  const bgUrl = useBackground();
+
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center font-sans">
-      <div className="bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/20">
-        <h1 className="text-4xl font-bold mb-4 tracking-tight">Welcome to Santuario</h1>
-        <p className="text-lg text-slate-300">Your local, privacy-focused dashboard.</p>
-      </div>
+    <div 
+      className="relative min-h-screen w-full bg-slate-900 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out font-sans"
+      style={{ backgroundImage: bgUrl ? `url(${bgUrl})` : undefined }}
+    >
+      {/* Overlay to ensure text readability over the image */}
+      <div className="absolute inset-0 bg-black/40 mix-blend-multiply z-0 pointer-events-none" />
+      
+      {/* Main Layout container */}
+      <Dashboard />
     </div>
   );
 };
