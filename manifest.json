@@ -4,7 +4,7 @@
   "version": "1.2.1",
   "description": "A fully custom privacy-focused new tab dashboard.",
   "chrome_url_overrides": {
-    "newtab": "src/newtab/index.html"
+    "newtab": "index.html"
   },
   "permissions": [
     "storage"
