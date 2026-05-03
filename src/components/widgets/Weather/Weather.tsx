@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
 import { MapPin, Settings } from 'lucide-react';
+import { WidgetContainer } from '../../layout/WidgetContainer';
 
 interface WeatherData {
   main: {
@@ -59,7 +60,7 @@ export const Weather: React.FC = () => {
 
   if (!apiKey || isSettingUp) {
     return (
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 text-white border border-white/10 shadow-lg w-full max-w-sm mx-auto">
+      <WidgetContainer className="w-full max-w-sm mx-auto">
         <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
           <Settings size={20} /> Weather Setup
         </h3>
@@ -93,12 +94,12 @@ export const Weather: React.FC = () => {
             </p>
           )}
         </form>
-      </div>
+      </WidgetContainer>
     );
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 text-white border border-white/10 shadow-lg group relative w-full max-w-sm mx-auto overflow-hidden">
+    <WidgetContainer className="group relative w-full max-w-sm mx-auto overflow-hidden">
       <button 
         onClick={() => setIsSettingUp(true)}
         className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
@@ -141,6 +142,6 @@ export const Weather: React.FC = () => {
           </div>
         </div>
       ) : null}
-    </div>
+    </WidgetContainer>
   );
 };

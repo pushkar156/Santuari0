@@ -4,8 +4,12 @@ import { Search } from 'lucide-react';
 
 export const SearchBar: React.FC = () => {
   const [query, setQuery] = useState('');
-  const { settings, updateSearchEngine } = useWidgetStore();
+  const { settings, updateSearchEngine, theme } = useWidgetStore();
   const defaultEngine = settings.search.defaultEngine;
+
+  const themeClass = theme === 'glass' 
+    ? 'bg-white/10 backdrop-blur-md border border-white/20' 
+    : 'bg-white/5 border border-transparent focus:bg-white/10';
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +44,7 @@ export const SearchBar: React.FC = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={`Search ${defaultEngine.charAt(0).toUpperCase() + defaultEngine.slice(1)}...`}
-          className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-4 pl-12 pr-4 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/20 transition-all duration-300 shadow-lg text-lg"
+          className={`w-full ${themeClass} rounded-full py-4 pl-12 pr-4 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 shadow-lg text-lg`}
         />
       </form>
       

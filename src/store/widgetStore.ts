@@ -16,6 +16,8 @@ export interface Todo {
 
 interface WidgetState {
   activeWidgets: string[];
+  theme: 'glass' | 'zen';
+  positions: Record<string, { x: number; y: number }>;
   settings: {
     search: {
       defaultEngine: string;
@@ -30,6 +32,8 @@ interface WidgetState {
   notes: string;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
+  setTheme: (theme: 'glass' | 'zen') => void;
+  updatePosition: (id: string, x: number, y: number) => void;
   updateSearchEngine: (engine: string) => void;
   addQuickLink: (link: Omit<QuickLink, 'id'>) => void;
   removeQuickLink: (id: string) => void;
@@ -59,6 +63,8 @@ export const useWidgetStore = create<WidgetState>()(
     (set) => ({
       // By default, let's have Clock and Greeting active
       activeWidgets: ['clock', 'greeting'],
+      theme: 'glass',
+      positions: {},
       settings: {
         search: {
           defaultEngine: 'google',
@@ -82,6 +88,16 @@ export const useWidgetStore = create<WidgetState>()(
       removeWidget: (widgetId) =>
         set((state) => ({
           activeWidgets: state.activeWidgets.filter((id) => id !== widgetId),
+        })),
+
+      setTheme: (theme) => set({ theme }),
+
+      updatePosition: (id, x, y) =>
+        set((state) => ({
+          positions: {
+            ...state.positions,
+            [id]: { x, y },
+          },
         })),
         
       updateSearchEngine: (engine) =>
