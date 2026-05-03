@@ -3,6 +3,8 @@ import { Greeting } from '../widgets/Greeting/Greeting';
 import { SearchBar } from '../widgets/SearchBar';
 import { QuickLinks } from '../widgets/QuickLinks';
 import { Weather } from '../widgets/Weather';
+import { Todo } from '../widgets/Todo';
+import { StickyNotes } from '../widgets/StickyNotes';
 
 export const Dashboard = () => {
   return (
@@ -22,7 +24,13 @@ export const Dashboard = () => {
         <QuickLinks />
       </main>
       
-      {/* Future widget areas can go here (bottom, corners, etc.) */}
+      {/* Bottom widgets area */}
+      <div className="absolute bottom-8 left-8 w-80">
+        <StickyNotes />
+      </div>
+      <div className="absolute bottom-8 right-8 w-80">
+        <Todo />
+      </div>
     </div>
   );
 };

@@ -8,6 +8,12 @@ export interface QuickLink {
   url: string;
 }
 
+export interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 interface WidgetState {
   activeWidgets: string[];
   settings: {
@@ -20,12 +26,18 @@ interface WidgetState {
     };
   };
   quickLinks: QuickLink[];
+  todos: Todo[];
+  notes: string;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   updateSearchEngine: (engine: string) => void;
   addQuickLink: (link: Omit<QuickLink, 'id'>) => void;
   removeQuickLink: (id: string) => void;
   updateWeatherSettings: (settings: { apiKey?: string; city?: string }) => void;
+  addTodo: (text: string) => void;
+  toggleTodo: (id: string) => void;
+  removeTodo: (id: string) => void;
+  updateNotes: (text: string) => void;
 }
 
 // Create an adapter for Zustand's persist middleware to use our custom storage wrapper
@@ -57,6 +69,8 @@ export const useWidgetStore = create<WidgetState>()(
         },
       },
       quickLinks: [],
+      todos: [],
+      notes: '',
       
       addWidget: (widgetId) =>
         set((state) => ({
@@ -101,6 +115,29 @@ export const useWidgetStore = create<WidgetState>()(
             },
           },
         })),
+        
+      addTodo: (text) =>
+        set((state) => ({
+          todos: [
+            ...state.todos,
+            { id: crypto.randomUUID(), text, completed: false },
+          ],
+        })),
+        
+      toggleTodo: (id) =>
+        set((state) => ({
+          todos: state.todos.map((todo) =>
+            todo.id === id ? { ...todo, completed: !todo.completed } : todo
+          ),
+        })),
+        
+      removeTodo: (id) =>
+        set((state) => ({
+          todos: state.todos.filter((todo) => todo.id !== id),
+        })),
+        
+      updateNotes: (text) =>
+        set({ notes: text }),
     }),
     {
       name: 'santuario-widget-storage',
