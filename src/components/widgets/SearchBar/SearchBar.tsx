@@ -45,7 +45,7 @@ export const SearchBar: React.FC = () => {
       </form>
       
       {/* Engine Selector - Optional subtle UI */}
-      <div className="flex gap-4 mt-3 text-xs text-white/50 opacity-0 hover:opacity-100 transition-opacity duration-300">
+      <div className="flex gap-4 mt-3 text-xs text-white/50 opacity-40 hover:opacity-100 transition-opacity duration-300">
         <button 
           onClick={() => updateSearchEngine('google')}
           className={`hover:text-white transition-colors ${defaultEngine === 'google' ? 'text-white font-medium' : ''}`}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
-import { Cloud, MapPin, Settings } from 'lucide-react';
+import { MapPin, Settings } from 'lucide-react';
 
 interface WeatherData {
   main: {
@@ -36,13 +36,16 @@ export const Weather: React.FC = () => {
     setError(null);
     try {
       const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`
       );
-      if (!response.ok) throw new Error('Failed to fetch weather');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error ${response.status}`);
+      }
       const result = await response.json();
       setData(result);
-    } catch (err) {
-      setError('Error fetching weather data. Please check your API key and city.');
+    } catch (err: any) {
+      setError(err.message || 'Error fetching weather data.');
     } finally {
       setLoading(false);
     }
