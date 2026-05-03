@@ -1,124 +1,102 @@
 # 🌅 Santuario
+> A high-performance, privacy-first dashboard for your browser.
 
-**Santuario** is a fully custom, privacy-focused new tab browser extension. It replaces your default blank new tab with a beautiful, widget-driven personal dashboard that acts as your daily command center.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-success?logo=vercel)](https://santuario-alpha.vercel.app)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?logo=vite)](https://vitejs.dev/)
 
-Designed with glassmorphism and minimal aesthetics, Santuario gives you complete control over your browser homepage without any subscription fees, analytics tracking, or data privacy concerns. 
-
-Everything stays local. Everything is yours.
-
----
-
-## ✨ Core Features
-
-Santuario is currently in active development. Here is what is available and what is planned:
-
-### 🚀 Available Now (Phase 1)
-- **Stunning Backgrounds**: Dynamic, curated background images powered by Unsplash.
-- **Live Clock**: A beautiful, real-time ticking digital clock widget.
-- **Personalized Greeting**: Time-based dynamic greetings tailored to you.
-
-### 🔮 Coming Soon (Roadmap)
-- **Productivity Suite**: 
-  - Quick Links Board (draggable bookmarks)
-  - Persistent Sticky Notes
-  - Daily Todo & Focus Task manager
-  - Multi-engine Search Bar
-- **Wellness & Habits**:
-  - Live Weather via OpenWeatherMap API
-  - 25/5 Pomodoro Timer
-  - Daily Habit Tracker & Streaks
-  - Spotify Now Playing integration
-- **Deep Customization**:
-  - Global drag-and-drop widget layout editor
-  - Dark/Light, Glassmorphism, and Cyberpunk theme presets
-  - Privacy/Blur toggle for public spaces
-  - Custom CSS configuration for power users
+**Santuario** is a premium, minimal, and privacy-focused browser extension that transforms your new tab page into a stunning personal command center. Built with **Glassmorphism** aesthetics and modern web standards, it offers a seamless experience without tracking, cloud-syncing, or subscription fees.
 
 ---
 
-## 🔒 The Privacy Promise
+## 📸 Preview
+*A visual showcase of the dashboard layout featuring the core widget suite.*
 
-Santuario was built specifically to be an alternative to SaaS-based dashboard extensions (like Momentum or LumiList). 
-- **Zero Cloud Syncing**: 100% of your data is stored locally on your machine using `chrome.storage.local`.
-- **Zero Accounts**: No sign-ups or login pages.
-- **Zero Tracking**: No analytics, telemetry, or behavior tracking scripts are used.
+> [!NOTE]
+> High-resolution screenshots coming soon in the next major release!
+
+---
+
+## ✨ Key Features
+
+### 🧩 Core Widgets (Available Now)
+- **🔍 Multi-Engine Search**: Switch between Google, DuckDuckGo, and Perplexity in a single click.
+- **⛅ Live Weather**: Dynamic updates powered by OpenWeatherMap API with beautiful weather-synced icons.
+- **📝 Productivity Suite**: 
+  - **Sticky Notes**: A persistent scratchpad for your immediate thoughts.
+  - **Daily Todo**: Simple, effective task management to keep you on track.
+- **🔗 Quick Links**: A custom-curated board for your most visited sites with auto-fetching favicons.
+- **⏰ Smart Greeting**: Time-aware personalized greetings with a sleek digital clock.
+- **🖼️ Unsplash Backgrounds**: High-resolution, curated photography that refreshes every session.
+
+### 🎨 Design & UX
+- **Glassmorphism Architecture**: Modern UI using backdrop blurs, subtle gradients, and smooth transitions.
+- **Responsive Layout**: Designed to look great on any screen size, from laptops to ultra-wide monitors.
+- **Zero Latency**: Highly optimized build ensures your new tab opens instantly.
+
+---
+
+## 🔒 Privacy & Architecture
+
+Santuario is built on the philosophy that **your data belongs to you**.
+
+1. **Local-First**: All your links, todos, and notes are stored on your device via `chrome.storage.local`.
+2. **Hybrid Engine**: The app features a custom storage adapter that switches between Chrome Storage (for the extension) and LocalStorage (for the web preview).
+3. **No Tracking**: We use zero analytics, zero trackers, and zero third-party cookies.
+4. **Vercel Optimized**: Fully compatible with Vercel for web hosting while maintaining all local features.
 
 ---
 
 ## 🛠️ Technology Stack
 
-Santuario is built with modern, lightning-fast web technologies:
-
-- **Framework**: React 18
-- **Build Tool**: Vite + CRXJS (for seamless hot-module-replacement in extension development)
-- **Styling**: Tailwind CSS & Framer Motion
-- **Language**: TypeScript
-- **Extension API**: Manifest V3 (Chrome, Edge, Brave, Firefox via WebExtensions)
+| Category | Technology |
+| :--- | :--- |
+| **Frontend** | React 18, TypeScript |
+| **State** | Zustand + Persistence Middleware |
+| **Styling** | Tailwind CSS, Framer Motion |
+| **Build Tool** | Vite, CRXJS |
+| **Deployment** | Vercel (Web), Chrome Web Store (Extension) |
 
 ---
 
-## 💻 Local Development & Installation
+## 🚀 Getting Started
 
-Want to run Santuario locally or contribute? It's incredibly easy to get started.
-
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or pnpm
-- Google Chrome (or a Chromium-based browser) for testing
-
-### 1. Setup the Project
-Clone the repository and install dependencies:
+### Installation (Local Development)
 
 ```bash
-git clone https://github.com/yourusername/santuario.git
-cd santuario
+# 1. Clone the repository
+git clone https://github.com/pushkar156/Santuari0.git
+
+# 2. Install dependencies
 npm install
-```
 
-### 2. Start the Development Server
-Run Vite's development server with CRXJS:
-
-```bash
+# 3. Start development server
 npm run dev
 ```
 
-### 3. Load the Extension into your Browser
-1. Open Chrome and navigate to `chrome://extensions/`.
-2. Enable **Developer mode** (toggle in the top right corner).
-3. Click **Load unpacked** in the top left corner.
-4. Select the `dist/` folder that was generated inside the project directory.
-5. Open a new tab! As you edit the React code, the extension will automatically hot-reload via Vite.
-
-### 4. Build for Production
-To build the final, optimized version for the Chrome Web Store:
-
-```bash
-npm run build
-```
-This generates the optimized bundle in the `dist/` directory, ready to be zipped and published.
+### Loading the Extension
+1. Go to `chrome://extensions/`
+2. Enable **Developer Mode**.
+3. Click **Load Unpacked** and select the `dist` folder.
 
 ---
 
-## 📂 Project Architecture
+## 🗺️ Roadmap
 
-```text
-santuario/
-├── public/                 # Static assets (icons, manifest base)
-├── src/
-│   ├── components/
-│   │   ├── layout/         # Core structural components (Dashboard)
-│   │   └── widgets/        # Individual feature widgets (Clock, Greeting)
-│   ├── hooks/              # Custom React hooks (useTime, useBackground)
-│   ├── newtab/             # New Tab page entry point (App.tsx, index.html)
-│   └── background.ts       # Service worker script
-├── .planning/              # GSD internal architecture and project tracking
-├── manifest.json           # Manifest V3 configuration
-├── tailwind.config.js      # Styling tokens and theme rules
-└── vite.config.ts          # Vite build and CRXJS config
-```
+- [x] **Phase 1**: Base Shell & Extension Scaffold
+- [x] **Phase 2**: Core Widgets & Storage Persistence
+- [ ] **Phase 3**: Polish, Themes (Zen/Cyber), & Drag-and-Drop Layout
+- [ ] **Phase 4**: Media Integration (Spotify) & Pomodoro Timer
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<p align="center">
+  Built with ❤️ for a better browser experience.
+</p>
