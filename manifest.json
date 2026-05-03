@@ -11,5 +11,8 @@
   ],
   "background": {
     "service_worker": "src/background.ts"
-  }
+  },
+  "host_permissions": [
+    "https://api.openweathermap.org/*"
+  ]
 }
