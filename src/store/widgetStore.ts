@@ -32,6 +32,16 @@ interface WidgetState {
   notes: string;
   userName: string;
   isBlurred: boolean;
+  spotifyToken: string | null;
+  spotifyClientId: string;
+  spotifyTrack: {
+    name: string;
+    artist: string;
+    albumArt: string;
+    isPlaying: boolean;
+    progress_ms: number;
+    duration_ms: number;
+  } | null;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
@@ -39,6 +49,9 @@ interface WidgetState {
   resetLayout: () => void;
   setUserName: (name: string) => void;
   toggleBlur: () => void;
+  setSpotifyToken: (token: string | null) => void;
+  setSpotifyClientId: (id: string) => void;
+  updateSpotifyTrack: (track: WidgetState['spotifyTrack']) => void;
   updateSearchEngine: (engine: string) => void;
   addQuickLink: (link: Omit<QuickLink, 'id'>) => void;
   removeQuickLink: (id: string) => void;
@@ -89,6 +102,9 @@ export const useWidgetStore = create<WidgetState>()(
       notes: '',
       userName: 'User',
       isBlurred: false,
+      spotifyToken: null,
+      spotifyClientId: '',
+      spotifyTrack: null,
       
       addWidget: (widgetId) =>
         set((state) => ({
@@ -118,6 +134,12 @@ export const useWidgetStore = create<WidgetState>()(
       setUserName: (name) => set({ userName: name }),
 
       toggleBlur: () => set((state) => ({ isBlurred: !state.isBlurred })),
+
+      setSpotifyToken: (token) => set({ spotifyToken: token }),
+
+      setSpotifyClientId: (id) => set({ spotifyClientId: id }),
+
+      updateSpotifyTrack: (track) => set({ spotifyTrack: track }),
         
       updateSearchEngine: (engine) =>
         set((state) => ({

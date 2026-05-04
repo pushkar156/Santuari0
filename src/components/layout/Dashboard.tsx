@@ -9,10 +9,15 @@ import { Todo } from '../widgets/Todo';
 import { StickyNotes } from '../widgets/StickyNotes';
 import { DraggableWidget } from './DraggableWidget';
 import { Settings } from './Settings';
+import { Spotify } from '../widgets/Spotify';
+import { useSpotify } from '../../hooks/useSpotify';
 import { useWidgetStore } from '../../store/widgetStore';
 
 export const Dashboard = () => {
   const { positions, updatePosition, isBlurred, toggleBlur } = useWidgetStore();
+  
+  // Initialize Spotify Polling
+  useSpotify();
   
   // Privacy Blur Shortcut (Alt + B)
   useEffect(() => {
@@ -75,6 +80,12 @@ export const Dashboard = () => {
         <DraggableWidget id="todo" initialPosition={positions['todo']}>
           <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
             <Todo />
+          </div>
+        </DraggableWidget>
+
+        <DraggableWidget id="spotify" initialPosition={positions['spotify'] || { x: 1000, y: 40 }}>
+          <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
+            <Spotify />
           </div>
         </DraggableWidget>
       </div>

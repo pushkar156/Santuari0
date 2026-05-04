@@ -7,12 +7,15 @@
     "newtab": "index.html"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "identity"
   ],
   "background": {
     "service_worker": "src/background.ts"
   },
   "host_permissions": [
-    "https://api.openweathermap.org/*"
+    "https://api.openweathermap.org/*",
+    "https://api.spotify.com/*",
+    "https://accounts.spotify.com/*"
   ]
 }

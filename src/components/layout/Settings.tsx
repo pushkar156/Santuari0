@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWidgetStore } from '../../store/widgetStore';
-import { Settings as SettingsIcon, X, User, Palette, EyeOff, Layout } from 'lucide-react';
+import { Settings as SettingsIcon, X, User, Palette, EyeOff, Layout, Music } from 'lucide-react';
+import { SpotifyService } from '../../lib/spotify';
 
 export const Settings = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -8,8 +9,24 @@ export const Settings = () => {
     userName, setUserName, 
     theme, setTheme, 
     isBlurred, toggleBlur, 
-    resetLayout 
+    resetLayout,
+    spotifyToken, setSpotifyToken,
+    spotifyClientId, setSpotifyClientId
   } = useWidgetStore();
+
+  const handleSpotifyConnect = async () => {
+    if (!spotifyClientId) {
+      alert('Please enter your Spotify Client ID first.');
+      return;
+    }
+    try {
+      const token = await SpotifyService.login(spotifyClientId);
+      setSpotifyToken(token);
+    } catch (error: any) {
+      console.error('Spotify login error:', error);
+      alert(`Spotify Connection Error: ${error.message || 'Check your Client ID and Redirect URI.'}`);
+    }
+  };
 
   return (
     <>
@@ -69,6 +86,31 @@ export const Settings = () => {
                   >
                     Zen
                   </button>
+                </div>
+              </div>
+
+              {/* Spotify Integration */}
+              <div className="space-y-3 pt-8 border-t border-white/10">
+                <label className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <Music size={16} /> Spotify Integration
+                </label>
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    value={spotifyClientId}
+                    onChange={(e) => setSpotifyClientId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-white/20 transition-all text-sm"
+                    placeholder="Enter Spotify Client ID..."
+                  />
+                  <button 
+                    onClick={handleSpotifyConnect}
+                    className={`w-full py-3 rounded-xl font-bold transition-all ${spotifyToken ? 'bg-green-500/20 text-green-500 border border-green-500/30' : 'bg-[#1DB954] text-white hover:bg-[#1ed760]'}`}
+                  >
+                    {spotifyToken ? 'Spotify Connected' : 'Connect Spotify'}
+                  </button>
+                  <p className="text-[10px] text-white/40">
+                    Redirect URI: <span className="select-all">{chrome.identity.getRedirectURL()}</span>
+                  </p>
                 </div>
               </div>
 
