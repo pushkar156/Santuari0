@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { Clock } from '../widgets/Clock/Clock';
 import { Greeting } from '../widgets/Greeting/Greeting';
@@ -10,7 +11,18 @@ import { DraggableWidget } from './DraggableWidget';
 import { useWidgetStore } from '../../store/widgetStore';
 
 export const Dashboard = () => {
-  const { positions, updatePosition, resetLayout } = useWidgetStore();
+  const { positions, updatePosition, resetLayout, isBlurred, toggleBlur } = useWidgetStore();
+  
+  // Privacy Blur Shortcut (Alt + B)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'b') {
+        toggleBlur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleBlur]);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -53,19 +65,19 @@ export const Dashboard = () => {
         
         {/* Draggable Widgets */}
         <DraggableWidget id="weather" initialPosition={positions['weather']}>
-          <div className="w-64">
+          <div className={`w-64 transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
             <Weather />
           </div>
         </DraggableWidget>
 
         <DraggableWidget id="sticky-notes" initialPosition={positions['sticky-notes']}>
-          <div className="w-80">
+          <div className={`w-80 transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
             <StickyNotes />
           </div>
         </DraggableWidget>
 
         <DraggableWidget id="todo" initialPosition={positions['todo']}>
-          <div className="w-80">
+          <div className={`w-80 transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
             <Todo />
           </div>
         </DraggableWidget>
