@@ -42,6 +42,8 @@ interface WidgetState {
     progress_ms: number;
     duration_ms: number;
   } | null;
+  habits: Array<{ id: string; name: string; completedDates: string[] }>;
+  countdowns: Array<{ id: string; name: string; targetDate: string }>;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
@@ -53,6 +55,16 @@ interface WidgetState {
   setSpotifyClientId: (id: string) => void;
   updateSpotifyTrack: (track: WidgetState['spotifyTrack']) => void;
   updateSearchEngine: (engine: string) => void;
+  
+  // Habits
+  addHabit: (name: string) => void;
+  removeHabit: (id: string) => void;
+  toggleHabit: (id: string, date: string) => void;
+  
+  // Countdowns
+  addCountdown: (name: string, targetDate: string) => void;
+  removeCountdown: (id: string) => void;
+
   addQuickLink: (link: Omit<QuickLink, 'id'>) => void;
   removeQuickLink: (id: string) => void;
   updateWeatherSettings: (settings: { apiKey?: string; city?: string }) => void;
@@ -105,6 +117,8 @@ export const useWidgetStore = create<WidgetState>()(
       spotifyToken: null,
       spotifyClientId: '',
       spotifyTrack: null,
+      habits: [],
+      countdowns: [],
       
       addWidget: (widgetId) =>
         set((state) => ({
@@ -140,6 +154,34 @@ export const useWidgetStore = create<WidgetState>()(
       setSpotifyClientId: (id) => set({ spotifyClientId: id }),
 
       updateSpotifyTrack: (track) => set({ spotifyTrack: track }),
+
+      // Habits
+      addHabit: (name) => set((state) => ({
+        habits: [...state.habits, { id: crypto.randomUUID(), name, completedDates: [] }]
+      })),
+      removeHabit: (id) => set((state) => ({
+        habits: state.habits.filter(h => h.id !== id)
+      })),
+      toggleHabit: (id, date) => set((state) => ({
+        habits: state.habits.map(h => {
+          if (h.id !== id) return h;
+          const exists = h.completedDates.includes(date);
+          return {
+            ...h,
+            completedDates: exists 
+              ? h.completedDates.filter(d => d !== date)
+              : [...h.completedDates, date]
+          };
+        })
+      })),
+
+      // Countdowns
+      addCountdown: (name, targetDate) => set((state) => ({
+        countdowns: [...state.countdowns, { id: crypto.randomUUID(), name, targetDate }]
+      })),
+      removeCountdown: (id) => set((state) => ({
+        countdowns: state.countdowns.filter(c => c.id !== id)
+      })),
         
       updateSearchEngine: (engine) =>
         set((state) => ({
