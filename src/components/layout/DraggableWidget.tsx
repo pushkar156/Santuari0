@@ -1,10 +1,10 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
 interface DraggableWidgetProps {
   id: string;
-  children: React.ReactNode;
+  children: ReactNode;
   initialPosition?: { x: number; y: number };
 }
 

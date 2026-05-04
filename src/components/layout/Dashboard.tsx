@@ -8,10 +8,11 @@ import { Weather } from '../widgets/Weather';
 import { Todo } from '../widgets/Todo';
 import { StickyNotes } from '../widgets/StickyNotes';
 import { DraggableWidget } from './DraggableWidget';
+import { Settings } from './Settings';
 import { useWidgetStore } from '../../store/widgetStore';
 
 export const Dashboard = () => {
-  const { positions, updatePosition, resetLayout, isBlurred, toggleBlur } = useWidgetStore();
+  const { positions, updatePosition, isBlurred, toggleBlur } = useWidgetStore();
   
   // Privacy Blur Shortcut (Alt + B)
   useEffect(() => {
@@ -45,13 +46,8 @@ export const Dashboard = () => {
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 w-full px-4 overflow-hidden">
-        {/* Reset Button (Top Right) */}
-        <button 
-          onClick={resetLayout}
-          className="absolute top-6 right-6 theme-glass px-4 py-2 text-sm font-medium hover:bg-white/20 transition-all z-50"
-        >
-          Reset Layout
-        </button>
+        {/* Settings Menu */}
+        <Settings />
 
         {/* Central focus area */}
         <main className="flex flex-col items-center justify-center flex-grow w-full max-w-4xl space-y-6">
