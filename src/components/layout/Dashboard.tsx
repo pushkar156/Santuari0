@@ -13,6 +13,7 @@ import { Spotify } from '../widgets/Spotify';
 import { Pomodoro } from '../widgets/Pomodoro';
 import { HabitTracker } from '../widgets/HabitTracker';
 import { Countdown } from '../widgets/Countdown';
+import { CustomCSSInjector } from './CustomCSSInjector';
 import { useSpotify } from '../../hooks/useSpotify';
 import { useWidgetStore } from '../../store/widgetStore';
 
@@ -56,6 +57,7 @@ export const Dashboard = () => {
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 w-full px-4 overflow-hidden">
         {/* Settings Menu */}
         <Settings />
+        <CustomCSSInjector />
 
         {/* Central focus area */}
         <main className="flex flex-col items-center justify-center flex-grow w-full max-w-4xl space-y-6">

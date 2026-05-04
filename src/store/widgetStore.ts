@@ -44,6 +44,7 @@ interface WidgetState {
   } | null;
   habits: Array<{ id: string; name: string; completedDates: string[] }>;
   countdowns: Array<{ id: string; name: string; targetDate: string }>;
+  customCSS: string;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
@@ -64,6 +65,7 @@ interface WidgetState {
   // Countdowns
   addCountdown: (name: string, targetDate: string) => void;
   removeCountdown: (id: string) => void;
+  setCustomCSS: (css: string) => void;
 
   addQuickLink: (link: Omit<QuickLink, 'id'>) => void;
   removeQuickLink: (id: string) => void;
@@ -119,6 +121,7 @@ export const useWidgetStore = create<WidgetState>()(
       spotifyTrack: null,
       habits: [],
       countdowns: [],
+      customCSS: '',
       
       addWidget: (widgetId) =>
         set((state) => ({
@@ -182,6 +185,8 @@ export const useWidgetStore = create<WidgetState>()(
       removeCountdown: (id) => set((state) => ({
         countdowns: state.countdowns.filter(c => c.id !== id)
       })),
+
+      setCustomCSS: (css) => set({ customCSS: css }),
         
       updateSearchEngine: (engine) =>
         set((state) => ({
