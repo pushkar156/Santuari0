@@ -3,10 +3,12 @@ import { useWidgetStore } from '../../../store/widgetStore';
 import { Plus, X } from 'lucide-react';
 
 export const QuickLinks: React.FC = () => {
-  const { quickLinks, addQuickLink, removeQuickLink } = useWidgetStore();
+  const { quickLinks, addQuickLink, removeQuickLink, theme } = useWidgetStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
+
+  const themeClass = theme === 'glass' ? 'theme-glass' : 'theme-zen';
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +41,7 @@ export const QuickLinks: React.FC = () => {
           <div key={link.id} className="relative group">
             <a
               href={link.url}
-              className="flex flex-col items-center justify-center w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+              className={`flex flex-col items-center justify-center w-24 h-24 ${themeClass} hover:bg-white/20 hover:shadow-xl hover:-translate-y-1`}
             >
               <div className="w-10 h-10 mb-2 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
                 <img 
@@ -67,7 +69,7 @@ export const QuickLinks: React.FC = () => {
         ))}
 
         {isAdding ? (
-          <div className="flex flex-col items-center justify-center w-48 h-24 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-3 shadow-lg">
+          <div className={`flex flex-col items-center justify-center w-48 h-24 ${themeClass} p-3 shadow-lg`}>
             <form onSubmit={handleAdd} className="flex flex-col gap-2 w-full">
               <input
                 type="text"
@@ -97,7 +99,7 @@ export const QuickLinks: React.FC = () => {
         ) : (
           <button
             onClick={() => setIsAdding(true)}
-            className="flex flex-col items-center justify-center w-24 h-24 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 border-dashed hover:bg-white/10 hover:border-solid transition-all duration-300"
+            className="flex flex-col items-center justify-center w-24 h-24 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 border-dashed hover:bg-white/10 hover:border-solid transition-all duration-300"
           >
             <Plus size={24} className="text-white/50 mb-1" />
             <span className="text-white/50 text-xs font-medium">Add Link</span>

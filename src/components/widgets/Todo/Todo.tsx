@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
 import { CheckCircle2, Circle, Plus, Trash2 } from 'lucide-react';
+import { WidgetContainer } from '../../layout/WidgetContainer';
 
 export const Todo: React.FC = () => {
   const [text, setText] = useState('');
@@ -15,7 +16,7 @@ export const Todo: React.FC = () => {
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 text-white border border-white/10 shadow-lg w-full h-full flex flex-col min-h-[300px]">
+    <WidgetContainer className="w-full h-full flex flex-col min-h-[300px]">
       <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
         Daily Tasks
       </h3>
@@ -75,6 +76,6 @@ export const Todo: React.FC = () => {
           <span>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         </div>
       )}
-    </div>
+    </WidgetContainer>
   );
 };
