@@ -30,10 +30,15 @@ interface WidgetState {
   quickLinks: QuickLink[];
   todos: Todo[];
   notes: string;
+  userName: string;
+  isBlurred: boolean;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
   updatePosition: (id: string, x: number, y: number) => void;
+  resetLayout: () => void;
+  setUserName: (name: string) => void;
+  toggleBlur: () => void;
   updateSearchEngine: (engine: string) => void;
   addQuickLink: (link: Omit<QuickLink, 'id'>) => void;
   removeQuickLink: (id: string) => void;
@@ -58,13 +63,18 @@ const storageAdapter: StateStorage = {
   },
 };
 
+export const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
+  'weather': { x: 40, y: 40 },
+  'sticky-notes': { x: 40, y: 450 },
+  'todo': { x: 1000, y: 40 },
+};
+
 export const useWidgetStore = create<WidgetState>()(
   persist(
     (set) => ({
-      // By default, let's have Clock and Greeting active
-      activeWidgets: ['clock', 'greeting'],
+      activeWidgets: ['clock', 'greeting', 'weather', 'todo', 'sticky-notes'],
       theme: 'glass',
-      positions: {},
+      positions: DEFAULT_POSITIONS,
       settings: {
         search: {
           defaultEngine: 'google',
@@ -77,6 +87,8 @@ export const useWidgetStore = create<WidgetState>()(
       quickLinks: [],
       todos: [],
       notes: '',
+      userName: 'User',
+      isBlurred: false,
       
       addWidget: (widgetId) =>
         set((state) => ({
@@ -99,6 +111,13 @@ export const useWidgetStore = create<WidgetState>()(
             [id]: { x, y },
           },
         })),
+
+      resetLayout: () =>
+        set({ positions: DEFAULT_POSITIONS }),
+
+      setUserName: (name) => set({ userName: name }),
+
+      toggleBlur: () => set((state) => ({ isBlurred: !state.isBlurred })),
         
       updateSearchEngine: (engine) =>
         set((state) => ({

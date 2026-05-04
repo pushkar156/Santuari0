@@ -10,7 +10,7 @@ import { DraggableWidget } from './DraggableWidget';
 import { useWidgetStore } from '../../store/widgetStore';
 
 export const Dashboard = () => {
-  const { positions, updatePosition } = useWidgetStore();
+  const { positions, updatePosition, resetLayout } = useWidgetStore();
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -24,6 +24,8 @@ export const Dashboard = () => {
     const { active, delta } = event;
     const id = active.id as string;
     
+    // We use the current position from state or fall back to (0,0)
+    // The jump happened because we were inconsistent with fallbacks
     const currentPos = positions[id] || { x: 0, y: 0 };
     updatePosition(id, currentPos.x + delta.x, currentPos.y + delta.y);
   };
@@ -31,7 +33,15 @@ export const Dashboard = () => {
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 w-full px-4 overflow-hidden">
-        {/* Central focus area (kept centered by default, but could be made draggable too) */}
+        {/* Reset Button (Top Right) */}
+        <button 
+          onClick={resetLayout}
+          className="absolute top-6 right-6 theme-glass px-4 py-2 text-sm font-medium hover:bg-white/20 transition-all z-50"
+        >
+          Reset Layout
+        </button>
+
+        {/* Central focus area */}
         <main className="flex flex-col items-center justify-center flex-grow w-full max-w-4xl space-y-6">
           <div className="space-y-2 flex flex-col items-center">
             <Clock />
@@ -42,19 +52,19 @@ export const Dashboard = () => {
         </main>
         
         {/* Draggable Widgets */}
-        <DraggableWidget id="weather" initialPosition={positions['weather'] || { x: 20, y: 20 }}>
+        <DraggableWidget id="weather" initialPosition={positions['weather']}>
           <div className="w-64">
             <Weather />
           </div>
         </DraggableWidget>
 
-        <DraggableWidget id="sticky-notes" initialPosition={positions['sticky-notes'] || { x: 20, y: 500 }}>
+        <DraggableWidget id="sticky-notes" initialPosition={positions['sticky-notes']}>
           <div className="w-80">
             <StickyNotes />
           </div>
         </DraggableWidget>
 
-        <DraggableWidget id="todo" initialPosition={positions['todo'] || { x: 1000, y: 500 }}>
+        <DraggableWidget id="todo" initialPosition={positions['todo']}>
           <div className="w-80">
             <Todo />
           </div>
