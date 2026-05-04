@@ -65,19 +65,19 @@ export const Dashboard = () => {
         
         {/* Draggable Widgets */}
         <DraggableWidget id="weather" initialPosition={positions['weather']}>
-          <div className={`w-64 transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
+          <div className={`w-64 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
             <Weather />
           </div>
         </DraggableWidget>
 
         <DraggableWidget id="sticky-notes" initialPosition={positions['sticky-notes']}>
-          <div className={`w-80 transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
+          <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
             <StickyNotes />
           </div>
         </DraggableWidget>
 
         <DraggableWidget id="todo" initialPosition={positions['todo']}>
-          <div className={`w-80 transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
+          <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
             <Todo />
           </div>
         </DraggableWidget>

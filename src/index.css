@@ -22,6 +22,6 @@
   }
 
   .privacy-blur {
-    @apply blur-xl pointer-events-none select-none opacity-50;
+    @apply blur-sm pointer-events-none select-none overflow-hidden bg-white/5;
   }
 }
