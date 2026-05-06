@@ -1,7 +1,7 @@
 {
   "name": "santuario",
   "private": true,
-  "version": "2.5.1",
+  "version": "2.5.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "framer-motion": "^11.0.0",
+    "gsap": "^3.12.5",
     "lucide-react": "^0.300.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

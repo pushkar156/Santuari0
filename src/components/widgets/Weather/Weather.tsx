@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
-import { MapPin, Settings } from 'lucide-react';
+import { useViewStore } from '../../../store/viewStore';
+import { MapPin, CloudRain, Settings as SettingsIcon } from 'lucide-react';
 import { WidgetContainer } from '../../layout/WidgetContainer';
 
 interface WeatherData {
@@ -16,15 +17,13 @@ interface WeatherData {
 }
 
 export const Weather: React.FC = () => {
-  const { settings, updateWeatherSettings } = useWidgetStore();
+  const { settings } = useWidgetStore();
+  const { setActiveView } = useViewStore();
   const { apiKey, city } = settings.weather;
   
   const [data, setData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSettingUp, setIsSettingUp] = useState(false);
-  const [tempCity, setTempCity] = useState(city);
-  const [tempKey, setTempKey] = useState(apiKey);
 
   useEffect(() => {
     if (apiKey && city) {
@@ -52,93 +51,63 @@ export const Weather: React.FC = () => {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateWeatherSettings({ apiKey: tempKey, city: tempCity });
-    setIsSettingUp(false);
-  };
-
-  if (!apiKey || isSettingUp) {
+  if (!apiKey || !city) {
     return (
-      <WidgetContainer className="w-full max-w-sm mx-auto">
-        <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-          <Settings size={20} /> Weather Setup
-        </h3>
-        <form onSubmit={handleSave} className="flex flex-col gap-3">
-          <div>
-            <label className="text-xs text-white/60 block mb-1">OpenWeatherMap API Key</label>
-            <input
-              type="password"
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              className="w-full bg-black/20 rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/50"
-              placeholder="Enter API Key"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-white/60 block mb-1">City</label>
-            <input
-              type="text"
-              value={tempCity}
-              onChange={(e) => setTempCity(e.target.value)}
-              className="w-full bg-black/20 rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/50"
-              placeholder="e.g. London"
-            />
-          </div>
-          <button type="submit" className="mt-2 bg-white/20 hover:bg-white/30 transition-colors py-2 rounded text-sm font-medium">
-            Save Settings
-          </button>
-          {!apiKey && (
-            <p className="text-[10px] text-white/40 mt-1">
-              Get a free key at <a href="https://openweathermap.org/" target="_blank" rel="noreferrer" className="underline">openweathermap.org</a>
-            </p>
-          )}
-        </form>
+      <WidgetContainer className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+        <CloudRain size={32} className="text-white/40 mb-4" />
+        <h3 className="text-lg font-bold text-white/80 mb-2">Weather API Not Configured</h3>
+        <p className="text-sm text-white/60 mb-6 leading-relaxed">
+          Please add your OpenWeather API key and city to see the weather forecast.
+        </p>
+        <button 
+          onClick={() => setActiveView('settings')}
+          className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 transition-all rounded-xl text-sm font-bold tracking-wider uppercase"
+        >
+          <SettingsIcon size={16} /> Go to Settings
+        </button>
       </WidgetContainer>
     );
   }
 
   return (
-    <WidgetContainer className="group relative w-full max-w-sm mx-auto overflow-hidden">
-      <button 
-        onClick={() => setIsSettingUp(true)}
-        className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-      >
-        <Settings size={16} />
-      </button>
-
+    <WidgetContainer className="w-full h-full relative overflow-hidden flex flex-col justify-between">
       {loading ? (
-        <div className="flex items-center justify-center h-24">
-          <div className="animate-pulse text-white/50">Loading weather...</div>
+        <div className="flex items-center justify-center h-full min-h-[120px]">
+          <div className="animate-pulse text-white/50 font-medium tracking-widest uppercase text-xs">Fetching Radar...</div>
         </div>
       ) : error ? (
-        <div className="text-center">
-          <p className="text-red-400 text-sm mb-2">{error}</p>
-          <button onClick={() => setIsSettingUp(true)} className="text-xs underline text-white/60 hover:text-white">
-            Fix Settings
+        <div className="text-center h-full flex flex-col items-center justify-center min-h-[120px]">
+          <p className="text-red-400 text-sm mb-4 font-medium">{error}</p>
+          <button 
+            onClick={() => setActiveView('settings')} 
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase transition-all"
+          >
+            <SettingsIcon size={14} /> Fix in Settings
           </button>
         </div>
       ) : data ? (
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col h-full justify-between">
+          <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-1 text-white/60 text-sm mb-1">
+              <div className="flex items-center gap-1.5 text-white/60 text-sm mb-1 font-medium tracking-wide">
                 <MapPin size={14} />
                 <span>{data.name}</span>
               </div>
-              <div className="text-4xl font-bold">{Math.round(data.main.temp)}°</div>
+              <div className="text-6xl font-bold tracking-tighter mt-2">{Math.round(data.main.temp)}°</div>
             </div>
-            <div className="text-right">
+            <div className="text-right flex flex-col items-end">
               <img 
                 src={`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`} 
                 alt={data.weather[0].description}
-                className="w-16 h-16 -mr-2"
+                className="w-20 h-20 -mr-4 drop-shadow-xl"
               />
-              <div className="text-sm capitalize text-white/80">{data.weather[0].description}</div>
+              <div className="text-sm font-medium capitalize text-white/80 pr-1">{data.weather[0].description}</div>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/5 flex gap-4 text-xs text-white/60">
-            <div>Humidity: {data.main.humidity}%</div>
+          <div className="mt-6 pt-4 border-t border-white/10 flex gap-4 text-sm font-medium text-white/60">
+            <div className="flex items-center gap-2">
+              <CloudRain size={14} /> {data.main.humidity}% Humidity
+            </div>
           </div>
         </div>
       ) : null}

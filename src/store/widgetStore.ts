@@ -17,7 +17,6 @@ export interface Todo {
 interface WidgetState {
   activeWidgets: string[];
   theme: 'glass' | 'zen';
-  positions: Record<string, { x: number; y: number }>;
   settings: {
     search: {
       defaultEngine: string;
@@ -46,8 +45,6 @@ interface WidgetState {
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
-  updatePosition: (id: string, x: number, y: number) => void;
-  resetLayout: () => void;
   setUserName: (name: string) => void;
   toggleBlur: () => void;
   setSpotifyToken: (token: string | null) => void;
@@ -78,18 +75,11 @@ const storageAdapter: StateStorage = {
   },
 };
 
-export const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
-  'weather': { x: 40, y: 40 },
-  'sticky-notes': { x: 40, y: 450 },
-  'todo': { x: 1000, y: 40 },
-};
-
 export const useWidgetStore = create<WidgetState>()(
   persist(
     (set) => ({
       activeWidgets: ['clock', 'greeting', 'weather', 'todo', 'sticky-notes'],
       theme: 'glass',
-      positions: DEFAULT_POSITIONS,
       settings: {
         search: {
           defaultEngine: 'google',
@@ -108,31 +98,20 @@ export const useWidgetStore = create<WidgetState>()(
       spotifyClientId: '',
       spotifyTrack: null,
       customCSS: '',
-      
+
       addWidget: (widgetId) =>
         set((state) => ({
           activeWidgets: state.activeWidgets.includes(widgetId)
             ? state.activeWidgets
             : [...state.activeWidgets, widgetId],
         })),
-        
+
       removeWidget: (widgetId) =>
         set((state) => ({
           activeWidgets: state.activeWidgets.filter((id) => id !== widgetId),
         })),
 
       setTheme: (theme) => set({ theme }),
-
-      updatePosition: (id, x, y) =>
-        set((state) => ({
-          positions: {
-            ...state.positions,
-            [id]: { x, y },
-          },
-        })),
-
-      resetLayout: () =>
-        set({ positions: DEFAULT_POSITIONS }),
 
       setUserName: (name) => set({ userName: name }),
 
@@ -143,9 +122,9 @@ export const useWidgetStore = create<WidgetState>()(
       setSpotifyClientId: (id) => set({ spotifyClientId: id }),
 
       updateSpotifyTrack: (track) => set({ spotifyTrack: track }),
-      
+
       setCustomCSS: (css) => set({ customCSS: css }),
-        
+
       updateSearchEngine: (engine) =>
         set((state) => ({
           settings: {
@@ -156,17 +135,17 @@ export const useWidgetStore = create<WidgetState>()(
             },
           },
         })),
-        
+
       addQuickLink: (link) =>
         set((state) => ({
           quickLinks: [...state.quickLinks, { ...link, id: crypto.randomUUID() }],
         })),
-        
+
       removeQuickLink: (id) =>
         set((state) => ({
           quickLinks: state.quickLinks.filter((link) => link.id !== id),
         })),
-        
+
       updateWeatherSettings: (settings: { apiKey?: string; city?: string }) =>
         set((state) => ({
           settings: {
@@ -177,7 +156,7 @@ export const useWidgetStore = create<WidgetState>()(
             },
           },
         })),
-        
+
       addTodo: (text) =>
         set((state) => ({
           todos: [
@@ -185,19 +164,19 @@ export const useWidgetStore = create<WidgetState>()(
             { id: crypto.randomUUID(), text, completed: false },
           ],
         })),
-        
+
       toggleTodo: (id) =>
         set((state) => ({
           todos: state.todos.map((todo) =>
             todo.id === id ? { ...todo, completed: !todo.completed } : todo
           ),
         })),
-        
+
       removeTodo: (id) =>
         set((state) => ({
           todos: state.todos.filter((todo) => todo.id !== id),
         })),
-        
+
       updateNotes: (text) =>
         set({ notes: text }),
     }),

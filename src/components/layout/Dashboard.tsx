@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
-import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { Clock } from '../widgets/Clock/Clock';
 import { Greeting } from '../widgets/Greeting/Greeting';
 import { SearchBar } from '../widgets/SearchBar';
 import { QuickLinks } from '../widgets/QuickLinks';
 import { Weather } from '../widgets/Weather';
-import { DraggableWidget } from './DraggableWidget';
 import { Settings } from './Settings';
 import { Spotify } from '../widgets/Spotify';
 import { useSpotify } from '../../hooks/useSpotify';
@@ -16,7 +14,7 @@ import PlaceholderView from '../views/PlaceholderView';
 import { CheckSquare, Calendar, Bookmark, HardDrive } from 'lucide-react';
 
 export const Dashboard = () => {
-  const { positions, updatePosition, isBlurred, toggleBlur } = useWidgetStore();
+  const { isBlurred, toggleBlur } = useWidgetStore();
   const { activeView } = useViewStore();
   
   // Initialize Spotify Polling
@@ -32,23 +30,6 @@ export const Dashboard = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleBlur]);
-  
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, delta } = event;
-    const id = active.id as string;
-    
-    // We use the current position from state or fall back to (0,0)
-    const currentPos = positions[id] || { x: 0, y: 0 };
-    updatePosition(id, currentPos.x + delta.x, currentPos.y + delta.y);
-  };
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -65,32 +46,39 @@ export const Dashboard = () => {
       case 'home':
       default:
         return (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <div className="flex flex-col items-center justify-center min-h-screen relative z-10 w-full px-4 overflow-hidden">
-              {/* Central focus area */}
-              <main className="flex flex-col items-center justify-center flex-grow w-full max-w-4xl space-y-6">
-                <div className="space-y-2 flex flex-col items-center">
-                  <Clock />
-                  <Greeting />
-                </div>
-                <SearchBar />
-                <QuickLinks />
-              </main>
+          <div className="min-h-screen w-full flex flex-col justify-center px-8 relative z-10 overflow-hidden py-12">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full max-w-7xl mx-auto items-stretch min-h-[70vh]">
               
-              {/* Draggable Widgets */}
-              <DraggableWidget id="weather" initialPosition={positions['weather']}>
-                <div className={`w-64 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
+              {/* Left Column (Weather & Spotify) */}
+              <div className="col-span-12 md:col-span-3 flex flex-col justify-between">
+                <div className={`w-full max-w-[280px] transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
                   <Weather />
                 </div>
-              </DraggableWidget>
 
-              <DraggableWidget id="spotify" initialPosition={positions['spotify'] || { x: 1000, y: 40 }}>
-                <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
+                <div className={`w-full max-w-[320px] transition-all duration-500 mt-12 ${isBlurred ? 'privacy-blur' : ''}`}>
                   <Spotify />
                 </div>
-              </DraggableWidget>
+              </div>
+
+              {/* Main Content Column (Clock, Search, Links) */}
+              <div className="col-span-12 md:col-span-7 md:col-start-6 flex flex-col items-start space-y-12 mt-4 md:mt-0 pt-8 lg:pr-12">
+                <div className="space-y-4 flex flex-col items-start text-left w-full">
+                  <Clock />
+                  <div className="pl-1"><Greeting /></div>
+                </div>
+                <div className="w-full max-w-2xl">
+                  <SearchBar />
+                </div>
+                <div className="w-full max-w-2xl">
+                  <QuickLinks />
+                </div>
+              </div>
+
+              {/* Right Column (Empty spacer for balance) */}
+              <div className="hidden md:block md:col-span-3"></div>
+
             </div>
-          </DndContext>
+          </div>
         );
     }
   };

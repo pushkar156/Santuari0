@@ -17,9 +17,6 @@ export const SearchBar: React.FC = () => {
 
     let url = '';
     switch (defaultEngine) {
-      case 'duckduckgo':
-        url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-        break;
       case 'perplexity':
         url = `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`;
         break;
@@ -48,23 +45,19 @@ export const SearchBar: React.FC = () => {
         />
       </form>
       
-      {/* Engine Selector - Optional subtle UI */}
-      <div className="flex gap-4 mt-3 text-xs text-white/50 opacity-40 hover:opacity-100 transition-opacity duration-300">
+      {/* Engine Selector - Toggle */}
+      <div className="mt-4 flex bg-white/5 backdrop-blur-sm rounded-full p-1 border border-white/10 opacity-40 hover:opacity-100 transition-opacity duration-300">
         <button 
+          type="button"
           onClick={() => updateSearchEngine('google')}
-          className={`hover:text-white transition-colors ${defaultEngine === 'google' ? 'text-white font-medium' : ''}`}
+          className={`px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${defaultEngine !== 'perplexity' ? 'bg-white/20 text-white font-bold shadow-md' : 'text-white/50 hover:text-white/80'}`}
         >
           Google
         </button>
         <button 
-          onClick={() => updateSearchEngine('duckduckgo')}
-          className={`hover:text-white transition-colors ${defaultEngine === 'duckduckgo' ? 'text-white font-medium' : ''}`}
-        >
-          DuckDuckGo
-        </button>
-        <button 
+          type="button"
           onClick={() => updateSearchEngine('perplexity')}
-          className={`hover:text-white transition-colors ${defaultEngine === 'perplexity' ? 'text-white font-medium' : ''}`}
+          className={`px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${defaultEngine === 'perplexity' ? 'bg-white/20 text-white font-bold shadow-md' : 'text-white/50 hover:text-white/80'}`}
         >
           Perplexity
         </button>

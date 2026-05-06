@@ -10,8 +10,8 @@ export const Clock = () => {
   }).replace(/^0/, ''); // Remove leading zero from hour if present
 
   return (
-    <div className="flex flex-col items-center justify-center select-none animate-pulse">
-      <h1 className="text-8xl md:text-[10rem] font-bold tracking-tighter text-white drop-shadow-lg transition-transform duration-700 hover:scale-105">
+    <div className="flex flex-col items-start justify-start select-none animate-pulse">
+      <h1 className="text-8xl md:text-[10rem] font-bold tracking-tighter text-white drop-shadow-lg transition-transform duration-700 hover:scale-[1.02] origin-left">
         {formattedTime}
       </h1>
     </div>

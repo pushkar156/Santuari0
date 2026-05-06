@@ -1,14 +1,13 @@
 
 import { useWidgetStore } from '../../store/widgetStore';
-import { Settings as SettingsIcon, User, Palette, EyeOff, Layout, Music, CloudRain } from 'lucide-react';
+import { Settings as SettingsIcon, User, Palette, EyeOff, Music, CloudRain } from 'lucide-react';
 import { SpotifyService } from '../../lib/spotify';
 
 export const Settings = () => {
   const { 
     userName, setUserName, 
     theme, setTheme, 
-    isBlurred, toggleBlur, 
-    resetLayout,
+    isBlurred, toggleBlur,
     spotifyToken, setSpotifyToken,
     spotifyClientId, setSpotifyClientId,
     customCSS, setCustomCSS,
@@ -162,14 +161,6 @@ export const Settings = () => {
               <div className={`w-12 h-6 rounded-full transition-all relative ${isBlurred ? 'bg-blue-500' : 'bg-white/20'}`}>
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isBlurred ? 'left-7' : 'left-1'}`} />
               </div>
-            </button>
-
-            <button 
-              onClick={resetLayout}
-              className="w-full flex items-center gap-3 p-5 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-left text-white/80"
-            >
-              <Layout size={20} className="text-white/60" />
-              <span className="text-lg">Reset Layout Positions</span>
             </button>
           </div>
         </div>

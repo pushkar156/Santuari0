@@ -2,10 +2,12 @@ import React from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
 import { SpotifyService } from '../../../lib/spotify';
 import { WidgetContainer } from '../../layout/WidgetContainer';
-import { Play, Pause, SkipBack, SkipForward, Music } from 'lucide-react';
+import { useViewStore } from '../../../store/viewStore';
+import { Play, Pause, SkipBack, SkipForward, Music, Settings as SettingsIcon } from 'lucide-react';
 
 export const Spotify: React.FC = () => {
   const { spotifyToken, spotifyTrack, updateSpotifyTrack } = useWidgetStore();
+  const { setActiveView } = useViewStore();
 
   const handleAction = async (action: 'play' | 'pause' | 'next' | 'previous') => {
     if (!spotifyToken) return;
@@ -23,9 +25,18 @@ export const Spotify: React.FC = () => {
 
   if (!spotifyToken) {
     return (
-      <WidgetContainer className="flex flex-col items-center justify-center p-8 space-y-4">
-        <Music size={40} className="text-white/20" />
-        <p className="text-sm text-white/60 text-center">Connect Spotify in Settings to see your music</p>
+      <WidgetContainer className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+        <Music size={32} className="text-white/40 mb-4" />
+        <h3 className="text-lg font-bold text-white/80 mb-2">Spotify Not Connected</h3>
+        <p className="text-sm text-white/60 mb-6 leading-relaxed">
+          Please connect your Spotify account in the settings to see your music.
+        </p>
+        <button 
+          onClick={() => setActiveView('settings')}
+          className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 transition-all rounded-xl text-sm font-bold tracking-wider uppercase"
+        >
+          <SettingsIcon size={16} /> Go to Settings
+        </button>
       </WidgetContainer>
     );
   }
