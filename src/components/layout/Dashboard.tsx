@@ -10,6 +10,10 @@ import { StickyNotes } from '../widgets/StickyNotes';
 import { DraggableWidget } from './DraggableWidget';
 import { Settings } from './Settings';
 import { Spotify } from '../widgets/Spotify';
+import { Pomodoro } from '../widgets/Pomodoro';
+import { HabitTracker } from '../widgets/HabitTracker';
+import { Countdown } from '../widgets/Countdown';
+import { CustomCSSInjector } from './CustomCSSInjector';
 import { useSpotify } from '../../hooks/useSpotify';
 import { useWidgetStore } from '../../store/widgetStore';
 
@@ -53,6 +57,7 @@ export const Dashboard = () => {
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 w-full px-4 overflow-hidden">
         {/* Settings Menu */}
         <Settings />
+        <CustomCSSInjector />
 
         {/* Central focus area */}
         <main className="flex flex-col items-center justify-center flex-grow w-full max-w-4xl space-y-6">
@@ -86,6 +91,24 @@ export const Dashboard = () => {
         <DraggableWidget id="spotify" initialPosition={positions['spotify'] || { x: 1000, y: 40 }}>
           <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
             <Spotify />
+          </div>
+        </DraggableWidget>
+
+        <DraggableWidget id="pomodoro" initialPosition={positions['pomodoro'] || { x: 40, y: 400 }}>
+          <div className={`w-64 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
+            <Pomodoro />
+          </div>
+        </DraggableWidget>
+
+        <DraggableWidget id="habits" initialPosition={positions['habits'] || { x: 400, y: 400 }}>
+          <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
+            <HabitTracker />
+          </div>
+        </DraggableWidget>
+
+        <DraggableWidget id="countdown" initialPosition={positions['countdown'] || { x: 800, y: 400 }}>
+          <div className={`w-80 transition-all duration-500 overflow-hidden ${isBlurred ? 'privacy-blur' : ''}`}>
+            <Countdown />
           </div>
         </DraggableWidget>
       </div>
