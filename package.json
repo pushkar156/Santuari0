@@ -1,7 +1,7 @@
 {
   "name": "santuario",
   "private": true,
-  "version": "1.2.1",
+  "version": "2.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

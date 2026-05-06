@@ -42,6 +42,7 @@ interface WidgetState {
     progress_ms: number;
     duration_ms: number;
   } | null;
+  customCSS: string;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
@@ -60,6 +61,7 @@ interface WidgetState {
   toggleTodo: (id: string) => void;
   removeTodo: (id: string) => void;
   updateNotes: (text: string) => void;
+  setCustomCSS: (css: string) => void;
 }
 
 // Create an adapter for Zustand's persist middleware to use our custom storage wrapper
@@ -105,6 +107,7 @@ export const useWidgetStore = create<WidgetState>()(
       spotifyToken: null,
       spotifyClientId: '',
       spotifyTrack: null,
+      customCSS: '',
       
       addWidget: (widgetId) =>
         set((state) => ({
@@ -140,6 +143,8 @@ export const useWidgetStore = create<WidgetState>()(
       setSpotifyClientId: (id) => set({ spotifyClientId: id }),
 
       updateSpotifyTrack: (track) => set({ spotifyTrack: track }),
+      
+      setCustomCSS: (css) => set({ customCSS: css }),
         
       updateSearchEngine: (engine) =>
         set((state) => ({
