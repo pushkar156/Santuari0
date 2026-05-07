@@ -3,18 +3,50 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --theme-text: #ffffff;
+    --theme-muted: rgba(255, 255, 255, 0.7);
+    --theme-glass: rgba(255, 255, 255, 0.1);
+    --theme-border: rgba(255, 255, 255, 0.2);
+    --theme-hover: rgba(255, 255, 255, 0.2);
+    --theme-bg-accent: #ffffff;
+    --theme-contrast: #0f172a;
+    
+    /* Gooey Nav Colors - Dark Mode (White Only) */
+    --color-1: #ffffff;
+    --color-2: #ffffff;
+    --color-3: #ffffff;
+    --color-4: #ffffff;
+  }
+  
+  .light-mode {
+    --theme-text: #0f172a;
+    --theme-muted: rgba(15, 23, 42, 0.7);
+    --theme-glass: rgba(255, 255, 255, 0.4);
+    --theme-border: rgba(0, 0, 0, 0.1);
+    --theme-hover: rgba(255, 255, 255, 0.6);
+    --theme-bg-accent: #0f172a;
+    --theme-contrast: #ffffff;
+
+    /* Gooey Nav Colors - Light Mode (Black/Dark) */
+    --color-1: #0f172a;
+    --color-2: #1e293b;
+    --color-3: #334155;
+    --color-4: #0f172a;
+  }
+
   body {
-    @apply bg-slate-900 text-white font-sans antialiased overflow-hidden;
+    @apply bg-slate-950 text-theme-text font-sans antialiased overflow-hidden transition-colors duration-500;
   }
 }
 
 @layer utilities {
   .theme-glass {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl transition-all duration-300;
+    @apply bg-theme-glass backdrop-blur-md border border-theme-border rounded-2xl shadow-xl transition-colors duration-300;
   }
   
   .theme-zen {
-    @apply bg-transparent border-none shadow-none transition-all duration-300;
+    @apply bg-transparent border-none shadow-none transition-colors duration-300;
   }
 
   .text-shadow-sm {

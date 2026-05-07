@@ -9,7 +9,7 @@ export const Greeting = () => {
 
   return (
     <div className="mt-4 flex flex-col items-start justify-start select-none opacity-90">
-      <h2 className="text-3xl md:text-5xl font-medium tracking-wide text-white drop-shadow-md">
+      <h2 className="text-3xl md:text-5xl font-medium tracking-wide text-theme-text drop-shadow-md">
         {greeting}, {userName}.
       </h2>
     </div>

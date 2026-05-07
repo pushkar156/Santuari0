@@ -26,14 +26,14 @@ export const Spotify: React.FC = () => {
   if (!spotifyToken) {
     return (
       <WidgetContainer className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
-        <Music size={32} className="text-white/40 mb-4" />
-        <h3 className="text-lg font-bold text-white/80 mb-2">Spotify Not Connected</h3>
-        <p className="text-sm text-white/60 mb-6 leading-relaxed">
+        <Music size={32} className="text-theme-muted mb-4" />
+        <h3 className="text-lg font-bold text-theme-text mb-2">Spotify Not Connected</h3>
+        <p className="text-sm text-theme-muted mb-6 leading-relaxed">
           Please connect your Spotify account in the settings to see your music.
         </p>
         <button 
           onClick={() => setActiveView('settings')}
-          className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 transition-all rounded-xl text-sm font-bold tracking-wider uppercase"
+          className="flex items-center gap-2 px-6 py-3 bg-theme-glass hover:bg-theme-hover text-theme-text transition-all rounded-xl text-sm font-bold tracking-wider uppercase"
         >
           <SettingsIcon size={16} /> Go to Settings
         </button>
@@ -44,8 +44,8 @@ export const Spotify: React.FC = () => {
   if (!spotifyTrack) {
     return (
       <WidgetContainer className="flex flex-col items-center justify-center p-8 space-y-4">
-        <Music size={40} className="text-white/40 animate-pulse" />
-        <p className="text-sm text-white/60">No music playing</p>
+        <Music size={40} className="text-theme-muted animate-pulse" />
+        <p className="text-sm text-theme-muted">No music playing</p>
       </WidgetContainer>
     );
   }
@@ -68,23 +68,23 @@ export const Spotify: React.FC = () => {
 
         {/* Track Info & Controls */}
         <div className="flex-grow min-w-0">
-          <h4 className="font-bold text-white truncate text-lg">{spotifyTrack.name}</h4>
-          <p className="text-white/70 truncate text-sm mb-3">{spotifyTrack.artist}</p>
+          <h4 className="font-bold text-theme-text truncate text-lg">{spotifyTrack.name}</h4>
+          <p className="text-theme-muted truncate text-sm mb-3">{spotifyTrack.artist}</p>
 
           {/* Controls */}
           <div className="flex items-center gap-6">
-            <button onClick={() => handleAction('previous')} className="text-white/60 hover:text-white transition-colors">
+            <button onClick={() => handleAction('previous')} className="text-theme-muted hover:text-theme-text transition-colors">
               <SkipBack size={20} fill="currentColor" />
             </button>
             
             <button 
               onClick={() => handleAction(spotifyTrack.isPlaying ? 'pause' : 'play')}
-              className="bg-white text-black p-2 rounded-full hover:scale-105 transition-all"
+              className="bg-theme-bg-accent text-theme-contrast p-2 rounded-full hover:scale-105 transition-all shadow-lg"
             >
               {spotifyTrack.isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
             </button>
 
-            <button onClick={() => handleAction('next')} className="text-white/60 hover:text-white transition-colors">
+            <button onClick={() => handleAction('next')} className="text-theme-muted hover:text-theme-text transition-colors">
               <SkipForward size={20} fill="currentColor" />
             </button>
           </div>

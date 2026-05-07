@@ -17,6 +17,7 @@ export interface Todo {
 interface WidgetState {
   activeWidgets: string[];
   theme: 'glass' | 'zen';
+  mode: 'dark' | 'light';
   settings: {
     search: {
       defaultEngine: string;
@@ -45,6 +46,7 @@ interface WidgetState {
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
+  setMode: (mode: 'dark' | 'light') => void;
   setUserName: (name: string) => void;
   toggleBlur: () => void;
   setSpotifyToken: (token: string | null) => void;
@@ -80,6 +82,7 @@ export const useWidgetStore = create<WidgetState>()(
     (set) => ({
       activeWidgets: ['clock', 'greeting', 'weather', 'todo', 'sticky-notes'],
       theme: 'glass',
+      mode: 'dark',
       settings: {
         search: {
           defaultEngine: 'google',
@@ -112,6 +115,8 @@ export const useWidgetStore = create<WidgetState>()(
         })),
 
       setTheme: (theme) => set({ theme }),
+
+      setMode: (mode) => set({ mode }),
 
       setUserName: (name) => set({ userName: name }),
 

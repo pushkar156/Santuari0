@@ -28,7 +28,7 @@ export const DraggableWidget = ({ id, children, initialPosition }: DraggableWidg
         <div 
           {...attributes} 
           {...listeners}
-          className="absolute -top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing bg-white/20 hover:bg-white/40 rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-bold z-50"
+          className="absolute -top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing bg-theme-glass backdrop-blur-sm border border-theme-border hover:bg-theme-hover text-theme-muted hover:text-theme-text rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-bold z-50"
         >
           ⠿ Drag
         </div>

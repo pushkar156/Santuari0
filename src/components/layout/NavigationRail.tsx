@@ -1,6 +1,7 @@
 import React from 'react';
-import { Home, CheckSquare, Calendar, Bookmark, HardDrive, Settings } from 'lucide-react';
+import { Home, CheckSquare, Calendar, Bookmark, HardDrive, Settings, Sun, Moon } from 'lucide-react';
 import { useViewStore, ViewType } from '../../store/viewStore';
+import { useWidgetStore } from '../../store/widgetStore';
 import GooeyNav from '../ui/GooeyNav';
 
 const navItems = [
@@ -14,11 +15,12 @@ const navItems = [
 
 export const NavigationRail: React.FC = () => {
   const { activeView, setActiveView } = useViewStore();
+  const { mode, setMode } = useWidgetStore();
 
   const initialActiveIndex = navItems.findIndex(item => item.id === activeView) || 0;
 
   return (
-    <div className="fixed right-6 top-1/2 -translate-y-1/2 p-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full z-50 shadow-2xl overflow-hidden">
+    <div className="fixed right-6 top-1/2 -translate-y-1/2 p-2 bg-theme-glass backdrop-blur-md border border-theme-border rounded-full z-50 shadow-2xl flex flex-col items-center gap-2">
       <GooeyNav
         items={navItems}
         vertical={true}
@@ -31,6 +33,14 @@ export const NavigationRail: React.FC = () => {
         colors={[1, 2, 3, 1, 2, 3, 1, 4]}
         onItemClick={(id) => setActiveView(id as ViewType)}
       />
+      <div className="w-8 h-px bg-theme-border my-1 rounded-full" />
+      <button
+        onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}
+        className="target-element p-3 rounded-full text-theme-muted hover:text-theme-text hover:bg-theme-hover transition-colors duration-300 relative group"
+        title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
+      >
+        {mode === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+      </button>
     </div>
   );
 };

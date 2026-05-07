@@ -27,11 +27,11 @@ export const Todo: React.FC = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Add a focus task..."
-          className="w-full bg-black/20 rounded-xl px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-white/30 transition-all placeholder-white/40"
+          className="w-full bg-theme-glass rounded-xl px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-theme-border transition-all placeholder-theme-muted"
         />
         <button 
           type="submit"
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-white/40 hover:text-white transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-theme-muted hover:text-theme-text transition-colors"
         >
           <Plus size={20} />
         </button>
@@ -39,29 +39,29 @@ export const Todo: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
         {todos.length === 0 ? (
-          <div className="text-center py-8 text-white/30 text-sm italic">
+          <div className="text-center py-8 text-theme-muted text-sm italic">
             No tasks for today.
           </div>
         ) : (
           todos.map((todo) => (
             <div 
               key={todo.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group"
+              className="flex items-center gap-3 p-3 rounded-xl bg-theme-glass hover:bg-theme-hover transition-colors group"
             >
               <button 
                 onClick={() => toggleTodo(todo.id)}
-                className={`transition-colors ${todo.completed ? 'text-green-400' : 'text-white/30 hover:text-white/60'}`}
+                className={`transition-colors ${todo.completed ? 'text-green-400' : 'text-theme-muted hover:text-theme-text'}`}
               >
                 {todo.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
               </button>
               
-              <span className={`flex-1 text-sm transition-all ${todo.completed ? 'line-through text-white/40' : 'text-white/90'}`}>
+              <span className={`flex-1 text-sm transition-all ${todo.completed ? 'line-through text-theme-muted' : 'text-theme-text opacity-90'}`}>
                 {todo.text}
               </span>
 
               <button 
                 onClick={() => removeTodo(todo.id)}
-                className="text-white/0 group-hover:text-white/30 hover:text-red-400 transition-all p-1"
+                className="text-transparent group-hover:text-theme-muted hover:text-red-400 transition-all p-1"
               >
                 <Trash2 size={16} />
               </button>
@@ -71,7 +71,7 @@ export const Todo: React.FC = () => {
       </div>
       
       {todos.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-white/5 text-[10px] text-white/30 flex justify-between">
+        <div className="mt-4 pt-4 border-t border-theme-border text-[10px] text-theme-muted flex justify-between">
           <span>{todos.filter(t => t.completed).length} of {todos.length} completed</span>
           <span>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         </div>

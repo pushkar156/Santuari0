@@ -41,9 +41,9 @@ export const QuickLinks: React.FC = () => {
           <div key={link.id} className="relative group">
             <a
               href={link.url}
-              className={`flex flex-col items-center justify-center w-24 h-24 ${themeClass} hover:bg-white/20 hover:shadow-xl hover:-translate-y-1`}
+              className={`flex flex-col items-center justify-center w-24 h-24 ${themeClass} hover:bg-theme-hover hover:shadow-xl hover:-translate-y-1`}
             >
-              <div className="w-10 h-10 mb-2 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+              <div className="w-10 h-10 mb-2 rounded-full bg-theme-glass flex items-center justify-center overflow-hidden">
                 <img 
                   src={`https://s2.googleusercontent.com/s2/favicons?domain=${getHostname(link.url)}&sz=64`} 
                   alt={link.title}
@@ -51,19 +51,19 @@ export const QuickLinks: React.FC = () => {
                   onError={(e) => {
                     // Fallback to text if favicon fails
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = `<span class="text-white text-lg font-bold">${link.title.charAt(0).toUpperCase()}</span>`;
+                    e.currentTarget.parentElement!.innerHTML = `<span class="text-theme-text text-sm font-bold">${link.title.charAt(0).toUpperCase()}</span>`;
                   }}
                 />
               </div>
-              <span className="text-white/80 text-xs font-medium truncate w-full text-center px-2">
+              <span className="text-theme-text text-[10px] font-medium truncate w-full text-center px-2 opacity-80">
                 {link.title}
               </span>
             </a>
             <button
               onClick={() => removeQuickLink(link.id)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-md"
+              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-md hover:scale-110"
             >
-              <X size={14} />
+              <X size={12} />
             </button>
           </div>
         ))}
@@ -76,7 +76,7 @@ export const QuickLinks: React.FC = () => {
                 placeholder="Title"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="bg-black/20 text-white text-xs rounded px-2 py-1 outline-none focus:ring-1 focus:ring-white/50 w-full"
+                className="bg-theme-glass text-theme-text text-xs rounded px-2 py-1 outline-none focus:ring-1 focus:ring-theme-border w-full"
                 autoFocus
               />
               <input
@@ -84,13 +84,13 @@ export const QuickLinks: React.FC = () => {
                 placeholder="URL"
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
-                className="bg-black/20 text-white text-xs rounded px-2 py-1 outline-none focus:ring-1 focus:ring-white/50 w-full"
+                className="bg-theme-glass text-theme-text text-xs rounded px-2 py-1 outline-none focus:ring-1 focus:ring-theme-border w-full"
               />
               <div className="flex justify-between mt-1">
-                <button type="button" onClick={() => setIsAdding(false)} className="text-white/60 hover:text-white text-xs">
+                <button type="button" onClick={() => setIsAdding(false)} className="text-theme-muted hover:text-theme-text text-xs">
                   Cancel
                 </button>
-                <button type="submit" className="text-white font-medium text-xs">
+                <button type="submit" className="text-theme-text font-medium text-xs">
                   Save
                 </button>
               </div>
@@ -99,10 +99,10 @@ export const QuickLinks: React.FC = () => {
         ) : (
           <button
             onClick={() => setIsAdding(true)}
-            className="flex flex-col items-center justify-center w-24 h-24 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 border-dashed hover:bg-white/10 hover:border-solid transition-all duration-300"
+            className="flex flex-col items-center justify-center w-24 h-24 bg-theme-glass backdrop-blur-sm rounded-2xl border border-theme-border border-dashed hover:bg-theme-hover hover:border-solid transition-all duration-300"
           >
-            <Plus size={24} className="text-white/50 mb-1" />
-            <span className="text-white/50 text-xs font-medium">Add Link</span>
+            <Plus size={24} className="text-theme-muted mb-1" />
+            <span className="text-theme-muted text-xs font-medium">Add Link</span>
           </button>
         )}
       </div>
