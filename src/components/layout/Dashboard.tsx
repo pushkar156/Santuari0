@@ -12,7 +12,8 @@ import { useViewStore, ViewType } from '../../store/viewStore';
 import { NavigationRail } from './NavigationRail';
 import PlaceholderView from '../views/PlaceholderView';
 import { TasksView } from '../views/TasksView';
-import { Calendar, Bookmark, HardDrive, Bot } from 'lucide-react';
+import { CalendarView } from '../views/CalendarView';
+import { Bookmark, HardDrive, Bot } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
 export const Dashboard = () => {
@@ -38,7 +39,7 @@ export const Dashboard = () => {
       case 'tasks':
         return <TasksView />;
       case 'calendar':
-        return <PlaceholderView title="Google Calendar" icon={<Calendar size={32} />} />;
+        return <CalendarView />;
       case 'bookmarks':
         return <PlaceholderView title="Bookmarks Organizer" icon={<Bookmark size={32} />} />;
       case 'drive':
