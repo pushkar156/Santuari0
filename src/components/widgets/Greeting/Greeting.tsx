@@ -8,7 +8,7 @@ export const Greeting = () => {
   const { userName } = useWidgetStore();
 
   return (
-    <div className="mt-4 flex flex-col items-start justify-start select-none opacity-90">
+    <div className="flex flex-col items-start justify-start select-none opacity-90">
       <h2 className="text-3xl md:text-5xl font-medium tracking-wide text-theme-text drop-shadow-md">
         {greeting}, {userName}.
       </h2>

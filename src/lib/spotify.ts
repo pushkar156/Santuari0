@@ -142,4 +142,13 @@ export class SpotifyService {
       }
     });
   }
+
+  static async seek(token: string, positionMs: number) {
+    await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=${Math.floor(positionMs)}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  }
 }

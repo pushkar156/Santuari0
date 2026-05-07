@@ -7,7 +7,7 @@ export const useTime = () => {
     // Update the time every second
     const timerId = setInterval(() => {
       setTime(new Date());
-    }, 1000);
+    }, 50);
 
     return () => clearInterval(timerId);
   }, []);

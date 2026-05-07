@@ -26,7 +26,7 @@ export const useSpotify = () => {
   useEffect(() => {
     if (spotifyToken) {
       fetchTrack(); // Initial fetch
-      pollTimer.current = window.setInterval(fetchTrack, 10000); // Poll every 10s
+      pollTimer.current = window.setInterval(fetchTrack, 3000); // Poll every 3s
     } else {
       if (pollTimer.current) {
         window.clearInterval(pollTimer.current);

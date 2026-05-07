@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Clock } from '../widgets/Clock/Clock';
-import { Greeting } from '../widgets/Greeting/Greeting';
+
 import { SearchBar } from '../widgets/SearchBar';
 import { QuickLinks } from '../widgets/QuickLinks';
 import { Weather } from '../widgets/Weather';
@@ -46,7 +46,7 @@ export const Dashboard = () => {
       case 'home':
       default:
         return (
-          <div className="min-h-screen w-full flex flex-col justify-center px-8 relative z-10 overflow-hidden py-12">
+          <div className="h-screen w-full flex flex-col justify-center px-8 relative z-10 overflow-hidden py-8">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full max-w-7xl mx-auto items-stretch min-h-[70vh]">
               
               {/* Left Column (Weather & Spotify) */}
@@ -64,7 +64,6 @@ export const Dashboard = () => {
               <div className="col-span-12 md:col-span-7 md:col-start-6 flex flex-col items-start space-y-12 mt-4 md:mt-0 pt-8 lg:pr-12">
                 <div className="space-y-4 flex flex-col items-start text-left w-full">
                   <Clock />
-                  <div className="pl-1"><Greeting /></div>
                 </div>
                 <div className="w-full max-w-2xl">
                   <SearchBar />
