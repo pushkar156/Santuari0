@@ -33,6 +33,7 @@ interface WidgetState {
   userName: string;
   isBlurred: boolean;
   spotifyToken: string | null;
+  spotifyRefreshToken: string | null;
   spotifyClientId: string;
   spotifyTrack: {
     name: string;
@@ -41,8 +42,13 @@ interface WidgetState {
     isPlaying: boolean;
     progress_ms: number;
     duration_ms: number;
+    uri?: string;
   } | null;
   customCSS: string;
+  customBackground: string | null;
+  recentBackgrounds: string[];
+  weatherConnected: boolean;
+  setWeatherConnected: (connected: boolean) => void;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
   setTheme: (theme: 'glass' | 'zen') => void;
@@ -50,6 +56,7 @@ interface WidgetState {
   setUserName: (name: string) => void;
   toggleBlur: () => void;
   setSpotifyToken: (token: string | null) => void;
+  setSpotifyRefreshToken: (token: string | null) => void;
   setSpotifyClientId: (id: string) => void;
   updateSpotifyTrack: (track: WidgetState['spotifyTrack']) => void;
   updateSearchEngine: (engine: string) => void;
@@ -61,6 +68,8 @@ interface WidgetState {
   removeTodo: (id: string) => void;
   updateNotes: (text: string) => void;
   setCustomCSS: (css: string) => void;
+  setCustomBackground: (background: string | null) => void;
+  removeRecentBackground: (background: string) => void;
 }
 
 // Create an adapter for Zustand's persist middleware to use our custom storage wrapper
@@ -98,9 +107,13 @@ export const useWidgetStore = create<WidgetState>()(
       userName: 'User',
       isBlurred: false,
       spotifyToken: null,
+      spotifyRefreshToken: null,
       spotifyClientId: '',
       spotifyTrack: null,
       customCSS: '',
+      customBackground: null,
+      recentBackgrounds: [],
+      weatherConnected: false,
 
       addWidget: (widgetId) =>
         set((state) => ({
@@ -124,11 +137,33 @@ export const useWidgetStore = create<WidgetState>()(
 
       setSpotifyToken: (token) => set({ spotifyToken: token }),
 
+      setSpotifyRefreshToken: (token) => set({ spotifyRefreshToken: token }),
+
       setSpotifyClientId: (id) => set({ spotifyClientId: id }),
 
       updateSpotifyTrack: (track) => set({ spotifyTrack: track }),
 
       setCustomCSS: (css) => set({ customCSS: css }),
+      setCustomBackground: (background) => 
+        set((state) => {
+          if (!background) return { customBackground: null };
+          
+          // Add to recent if not already there, or move to front if it is
+          const filtered = state.recentBackgrounds.filter(bg => bg !== background);
+          const updatedRecent = [background, ...filtered].slice(0, 10);
+          
+          return { 
+            customBackground: background,
+            recentBackgrounds: updatedRecent
+          };
+        }),
+      
+      removeRecentBackground: (background) =>
+        set((state) => ({
+          recentBackgrounds: state.recentBackgrounds.filter(bg => bg !== background)
+        })),
+
+      setWeatherConnected: (connected) => set({ weatherConnected: connected }),
 
       updateSearchEngine: (engine) =>
         set((state) => ({

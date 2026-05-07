@@ -1,9 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 export interface GooeyNavItem {
-  id: string;
-  label: string;
+  id?: string;
+  label?: string;
   icon?: React.ReactNode;
+  type?: 'item' | 'separator';
 }
 
 export interface GooeyNavProps {
@@ -310,25 +311,33 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
               color: 'var(--theme-muted)',
             }}
           >
-            {items.map((item, index) => (
-              <li
-                key={item.id}
-                className={`rounded-full relative cursor-pointer transition-[background-color_color_box-shadow] duration-300 ease shadow-[0_0_0.5px_1.5px_transparent] ${
-                  activeIndex === index ? 'active text-theme-contrast' : 'text-theme-muted hover:text-theme-text'
-                }`}
-              >
-                <button
-                  onClick={e => handleClick(e, index, item.id)}
-                  onKeyDown={e => handleKeyDown(e, index, item.id)}
-                  className="outline-none p-3 flex items-center justify-center w-full h-full"
-                  title={item.label}
+            {items.map((item, index) => {
+              if (item.type === 'separator') {
+                return (
+                  <li key={`sep-${index}`} className="flex justify-center py-1">
+                    <div className="w-8 h-px bg-theme-border rounded-full" />
+                  </li>
+                );
+              }
+              return (
+                <li
+                  key={item.id}
+                  className={`rounded-full relative cursor-pointer transition-[background-color_color_box-shadow] duration-300 ease shadow-[0_0_0.5px_1.5px_transparent] ${
+                    activeIndex === index ? 'active text-theme-contrast' : 'text-theme-muted hover:text-theme-text'
+                  }`}
                 >
-                  {item.icon && <span className="flex items-center justify-center pointer-events-none">{item.icon}</span>}
-                  {/* Hide label if icon exists for cleaner vertical layout, or show depending on preference. Here we hide label on vertical to mimic rail */}
-                  {!vertical && <span>{item.label}</span>}
-                </button>
-              </li>
-            ))}
+                  <button
+                    onClick={e => item.id && handleClick(e, index, item.id)}
+                    onKeyDown={e => item.id && handleKeyDown(e, index, item.id)}
+                    className="outline-none p-3 flex items-center justify-center w-full h-full"
+                    title={item.label}
+                  >
+                    {item.icon && <span className="flex items-center justify-center pointer-events-none">{item.icon}</span>}
+                    {!vertical && <span>{item.label}</span>}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </nav>
         <span className={`effect filter ${vertical ? 'rounded-full' : ''}`} ref={filterRef} />

@@ -11,29 +11,34 @@
 ---
 
 ## 📸 Preview
-*A visual showcase of the dashboard layout featuring the core widget suite.*
 
-> [!NOTE]
-> High-resolution screenshots coming soon in the next major release!
+*Santuario offers a serene, glassmorphism-inspired interface designed to help you focus and stay productive.*
 
 ---
 
 ## ✨ Key Features
 
-### 🧩 Core Widgets (Available Now)
+### 🚀 Advanced Navigation & Workspace
+- **Modular Navigation Rail**: A sleek, right-side command bar for instant switching between specialized views.
+- **Multi-View Ecosystem**: Dedicated interfaces for Home, Tasks, Calendar, Bookmarks, Local Media, and an integrated AI Assistant (OVI).
+- **Gooey Interaction Design**: High-end interactive navigation components with fluid, organic transitions.
+- **Perspective Layout**: A structured grid that balances focus and information density.
+
+### 🧩 Core Widgets
 - **🔍 Multi-Engine Search**: Switch between Google, DuckDuckGo, and Perplexity in a single click.
-- **⛅ Live Weather**: Dynamic updates powered by OpenWeatherMap API with beautiful weather-synced icons.
+- **⛅ Live Weather**: Dynamic updates powered by OpenWeatherMap API with weather-synced icons.
+- **🎵 Spotify Connect**: Full playback control and real-time "Now Playing" metadata with PKCE authentication.
 - **📝 Productivity Suite**: 
   - **Sticky Notes**: A persistent scratchpad for your immediate thoughts.
-  - **Daily Todo**: Simple, effective task management to keep you on track.
+  - **Daily Todo**: Simple, effective task management.
 - **🔗 Quick Links**: A custom-curated board for your most visited sites with auto-fetching favicons.
 - **⏰ Smart Greeting**: Time-aware personalized greetings with a sleek digital clock.
-- **🖼️ Unsplash Backgrounds**: High-resolution, curated photography that refreshes every session.
 
-### 🎨 Design & UX
-- **Glassmorphism Architecture**: Modern UI using backdrop blurs, subtle gradients, and smooth transitions.
-- **Responsive Layout**: Designed to look great on any screen size, from laptops to ultra-wide monitors.
-- **Zero Latency**: Highly optimized build ensures your new tab opens instantly.
+### 🖼️ Wallpaper Engine
+- **Custom Uploads**: Use any image as your background with local persistence.
+- **In-App Image Editor**: Crop, rotate (90° increments), and zoom wallpapers directly within the dashboard.
+- **Wallpaper History**: Remembers your last 10 backgrounds for quick switching.
+- **High-Fidelity Aesthetics**: Glassmorphism UI with backdrop blurs and spring-physics transitions.
 
 ---
 
@@ -41,10 +46,20 @@
 
 Santuario is built on the philosophy that **your data belongs to you**.
 
-1. **Local-First**: All your links, todos, and notes are stored on your device via `chrome.storage.local`.
-2. **Hybrid Engine**: The app features a custom storage adapter that switches between Chrome Storage (for the extension) and LocalStorage (for the web preview).
-3. **No Tracking**: We use zero analytics, zero trackers, and zero third-party cookies.
-4. **Vercel Optimized**: Fully compatible with Vercel for web hosting while maintaining all local features.
+1. **Local-First**: All your links, todos, and backgrounds are stored on your device via `chrome.storage.local`.
+2. **Hybrid Engine**: Custom storage adapter switches between Chrome Storage (extension) and LocalStorage (web preview).
+3. **Privacy Blur**: Press `Alt + B` to instantly blur sensitive widgets when someone walks behind you.
+4. **No Tracking**: Zero analytics, zero trackers, and zero third-party cookies.
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Alt + B` | Toggle Privacy Blur |
+| `Esc` | Close Settings / Background Modals |
+| `Enter` | Search from the bar |
 
 ---
 
@@ -53,8 +68,9 @@ Santuario is built on the philosophy that **your data belongs to you**.
 | Category | Technology |
 | :--- | :--- |
 | **Frontend** | React 18, TypeScript |
+| **Animation** | Framer Motion (Spring Physics) |
 | **State** | Zustand + Persistence Middleware |
-| **Styling** | Tailwind CSS, Framer Motion |
+| **Styling** | Tailwind CSS + Custom CSS Variables |
 | **Build Tool** | Vite, CRXJS |
 | **Deployment** | Vercel (Web), Chrome Web Store (Extension) |
 
@@ -75,19 +91,26 @@ npm install
 npm run dev
 ```
 
+### 🔑 API Configuration
+
+To enable the full suite of features, you will need to obtain API keys from the following services and add them via the **Settings** panel within the extension.
+
+| Service | Purpose | Source |
+| :--- | :--- | :--- |
+| **OpenWeatherMap** | Live Weather Updates | [Get API Key](https://home.openweathermap.org/api_keys) |
+| **Spotify Developer** | Now Playing Widget | [Create App](https://developer.spotify.com/dashboard) |
+
+#### **How to Add Keys:**
+1. Click the **Settings (Gear Icon)** in the right-side Navigation Rail.
+2. Enter your **OpenWeatherMap API Key** and your city name.
+3. Enter your **Spotify Client ID**. 
+   - *Note: You must add the Redirect URI found in the settings panel to your Spotify Developer Dashboard under "Edit Settings".*
+
 ### Loading the Extension
-1. Go to `chrome://extensions/`
-2. Enable **Developer Mode**.
-3. Click **Load Unpacked** and select the `dist` folder.
-
----
-
-## 🗺️ Roadmap
-
-- [x] **Phase 1**: Base Shell & Extension Scaffold
-- [x] **Phase 2**: Core Widgets & Storage Persistence
-- [ ] **Phase 3**: Polish, Themes (Zen/Cyber), & Drag-and-Drop Layout
-- [ ] **Phase 4**: Media Integration (Spotify) & Pomodoro Timer
+1. Run `npm run build`
+2. Go to `chrome://extensions/`
+3. Enable **Developer Mode**.
+4. Click **Load Unpacked** and select the `dist` folder.
 
 ---
 

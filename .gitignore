@@ -7,15 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Build outputs
+dist/
+dist-ssr/
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,14 +34,17 @@ dist-ssr
 *.sln
 *.sw?
 
-# Vite / React / TypeScript
+# OS metadata
+Thumbs.db
+desktop.ini
+
+# Vite / React
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.tscache/
-tsbuildinfo
-*.tsbuildinfo
+.eslintcache
 
+# Project specific
 .planning/

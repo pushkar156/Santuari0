@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
 import { useViewStore } from '../../../store/viewStore';
-import { MapPin, CloudRain, Settings as SettingsIcon } from 'lucide-react';
+import { MapPin, CloudRain, Settings as SettingsIcon, Sun, Moon, Cloud, CloudDrizzle, CloudLightning, CloudSnow, Wind } from 'lucide-react';
 import { WidgetContainer } from '../../layout/WidgetContainer';
 
 interface WeatherData {
@@ -17,7 +17,7 @@ interface WeatherData {
 }
 
 export const Weather: React.FC = () => {
-  const { settings } = useWidgetStore();
+  const { settings, weatherConnected } = useWidgetStore();
   const { setActiveView } = useViewStore();
   const { apiKey, city } = settings.weather;
   
@@ -26,10 +26,12 @@ export const Weather: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (apiKey && city) {
+    if (weatherConnected && apiKey && city) {
       fetchWeather();
+    } else {
+      setData(null);
     }
-  }, [apiKey, city]);
+  }, [weatherConnected, apiKey, city]);
 
   const fetchWeather = async () => {
     setLoading(true);
@@ -51,13 +53,38 @@ export const Weather: React.FC = () => {
     }
   };
 
-  if (!apiKey || !city) {
+  const getWeatherIcon = (iconCode: string) => {
+    const iconProps = { size: 48, className: "text-theme-text" };
+    const iconMap: Record<string, React.ReactNode> = {
+      '01d': <Sun {...iconProps} className="text-yellow-400" />,
+      '01n': <Moon {...iconProps} className="text-blue-200" />,
+      '02d': <Cloud {...iconProps} className="text-gray-300" />,
+      '02n': <Cloud {...iconProps} className="text-gray-400" />,
+      '03d': <Cloud {...iconProps} className="text-gray-300" />,
+      '03n': <Cloud {...iconProps} className="text-gray-400" />,
+      '04d': <Cloud {...iconProps} className="text-gray-500" />,
+      '04n': <Cloud {...iconProps} className="text-gray-600" />,
+      '09d': <CloudDrizzle {...iconProps} className="text-blue-400" />,
+      '09n': <CloudDrizzle {...iconProps} className="text-blue-600" />,
+      '10d': <CloudRain {...iconProps} className="text-blue-500" />,
+      '10n': <CloudRain {...iconProps} className="text-blue-700" />,
+      '11d': <CloudLightning {...iconProps} className="text-yellow-500" />,
+      '11n': <CloudLightning {...iconProps} className="text-yellow-700" />,
+      '13d': <CloudSnow {...iconProps} className="text-blue-100" />,
+      '13n': <CloudSnow {...iconProps} className="text-blue-200" />,
+      '50d': <Wind {...iconProps} className="text-gray-400" />,
+      '50n': <Wind {...iconProps} className="text-gray-500" />,
+    };
+    return iconMap[iconCode] || <Sun {...iconProps} />;
+  };
+
+  if (!weatherConnected || !apiKey || !city) {
     return (
       <WidgetContainer className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
         <CloudRain size={32} className="text-theme-muted mb-4" />
-        <h3 className="text-lg font-bold text-theme-text mb-2">Weather API Not Configured</h3>
+        <h3 className="text-lg font-bold text-theme-text mb-2">Weather Not Connected</h3>
         <p className="text-sm text-theme-muted mb-6 leading-relaxed">
-          Please add your OpenWeather API key and city to see the weather forecast.
+          Please connect your OpenWeather account in settings to see the forecast.
         </p>
         <button 
           onClick={() => setActiveView('settings')}
@@ -96,11 +123,9 @@ export const Weather: React.FC = () => {
               <div className="text-6xl font-bold tracking-tighter mt-2 text-theme-text">{Math.round(data.main.temp)}°</div>
             </div>
             <div className="text-right flex flex-col items-end">
-              <img 
-                src={`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`} 
-                alt={data.weather[0].description}
-                className="w-20 h-20 -mr-4 drop-shadow-xl"
-              />
+              <div className="text-5xl mb-2 filter drop-shadow-lg leading-none select-none hover:scale-110 transition-transform duration-300">
+                {getWeatherIcon(data.weather[0].icon)}
+              </div>
               <div className="text-sm font-medium capitalize text-theme-text pr-1">{data.weather[0].description}</div>
             </div>
           </div>

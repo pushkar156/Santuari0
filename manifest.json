@@ -8,7 +8,8 @@
   },
   "permissions": [
     "storage",
-    "identity"
+    "identity",
+    "unlimitedStorage"
   ],
   "background": {
     "service_worker": "src/background.ts"

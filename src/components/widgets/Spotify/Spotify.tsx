@@ -4,10 +4,12 @@ import { SpotifyService } from '../../../lib/spotify';
 import { WidgetContainer } from '../../layout/WidgetContainer';
 import { useViewStore } from '../../../store/viewStore';
 import { Play, Pause, SkipBack, SkipForward, Music, Settings as SettingsIcon } from 'lucide-react';
+import { useSpotify } from '../../../hooks/useSpotify';
 
 export const Spotify: React.FC = () => {
   const { spotifyToken, spotifyTrack, updateSpotifyTrack } = useWidgetStore();
   const { setActiveView } = useViewStore();
+  const { resumePlayback } = useSpotify(); // No polling here, Dashboard handles it
   const [localProgress, setLocalProgress] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -39,6 +41,10 @@ export const Spotify: React.FC = () => {
   const handleAction = async (action: 'play' | 'pause' | 'next' | 'previous') => {
     if (!spotifyToken) return;
     try {
+      if (action === 'play' && !spotifyTrack?.isPlaying) {
+        await resumePlayback();
+        return;
+      }
       await SpotifyService.controlPlayback(spotifyToken, action);
       // Brief delay to let Spotify update its state before we fetch
       setTimeout(async () => {
@@ -97,7 +103,46 @@ export const Spotify: React.FC = () => {
     return (
       <WidgetContainer className="flex flex-col items-center justify-center p-8 space-y-4">
         <Music size={40} className="text-theme-muted animate-pulse" />
-        <p className="text-sm text-theme-muted">No music playing</p>
+        <p className="text-sm text-theme-muted">No active session</p>
+        <button 
+          onClick={async () => {
+            const track = await SpotifyService.getCurrentlyPlaying(spotifyToken);
+            if (track) updateSpotifyTrack(track);
+          }}
+          className="text-[10px] font-bold uppercase tracking-widest text-theme-text bg-theme-glass px-4 py-2 rounded-lg hover:bg-theme-hover transition-all"
+        >
+          Refresh State
+        </button>
+      </WidgetContainer>
+    );
+  }
+
+  if (!spotifyTrack.isPlaying && spotifyTrack.uri) {
+    return (
+      <WidgetContainer className="group relative overflow-hidden p-0 min-h-[140px] flex flex-col">
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-20 blur-2xl scale-110"
+          style={{ backgroundImage: `url(${spotifyTrack.albumArt})` }}
+        />
+        <div className="relative z-10 flex flex-col items-center justify-center h-full p-6 text-center">
+          <div className="relative mb-4">
+            <img src={spotifyTrack.albumArt} className="w-16 h-16 rounded-lg shadow-2xl opacity-50" />
+            <button 
+              onClick={resumePlayback}
+              className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/20 rounded-lg transition-all group/play"
+            >
+              <Play size={24} fill="white" className="text-white group-hover/play:scale-125 transition-transform" />
+            </button>
+          </div>
+          <h4 className="font-bold text-theme-text text-sm truncate w-full px-4">{spotifyTrack.name}</h4>
+          <p className="text-theme-muted text-[10px] uppercase tracking-widest mb-4">Ready to Resume</p>
+          <button 
+            onClick={resumePlayback}
+            className="bg-theme-text text-theme-contrast px-6 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+          >
+            Play on this Device
+          </button>
+        </div>
       </WidgetContainer>
     );
   }
