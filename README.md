@@ -91,20 +91,35 @@ npm install
 npm run dev
 ```
 
-### 🔑 API Configuration
+To enable the full suite of features, you will need to obtain API keys/IDs from the following services.
 
-To enable the full suite of features, you will need to obtain API keys from the following services and add them via the **Settings** panel within the extension.
+| Service | Purpose | Source | Configuration Method |
+| :--- | :--- | :--- | :--- |
+| **OpenWeatherMap** | Live Weather Updates | [Get API Key](https://home.openweathermap.org/api_keys) | Settings Panel (Weather) |
+| **Spotify Developer** | Now Playing Widget | [Create App](https://developer.spotify.com/dashboard) | Settings Panel (Spotify) |
+| **Google Cloud** | Tasks & Calendar Sync | [Cloud Console](https://console.cloud.google.com/apis/credentials) | `manifest.json` |
 
-| Service | Purpose | Source |
-| :--- | :--- | :--- |
-| **OpenWeatherMap** | Live Weather Updates | [Get API Key](https://home.openweathermap.org/api_keys) |
-| **Spotify Developer** | Now Playing Widget | [Create App](https://developer.spotify.com/dashboard) |
+#### **Step-by-Step Setup:**
 
-#### **How to Add Keys:**
-1. Click the **Settings (Gear Icon)** in the right-side Navigation Rail.
-2. Enter your **OpenWeatherMap API Key** and your city name.
-3. Enter your **Spotify Client ID**. 
-   - *Note: You must add the Redirect URI found in the settings panel to your Spotify Developer Dashboard under "Edit Settings".*
+1.  **OpenWeatherMap**:
+    - Sign up at OpenWeatherMap and generate an API key.
+    - Open Santuario **Settings (Gear Icon)** -> **Weather Integration**.
+    - Enter your Key and City.
+
+2.  **Spotify Integration**:
+    - Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+    - Copy your **Client ID** into Santuario Settings.
+    - **Crucial**: Add the Redirect URI (found in the Settings panel) to your Spotify App settings under "Edit Settings" -> "Redirect URIs".
+
+3.  **Google Tasks Integration**:
+    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/dashboard).
+    - Create a new project and enable the **Google Tasks API**.
+    - Go to **Credentials** -> **Create Credentials** -> **OAuth client ID**.
+    - Select **Chrome extension** as the application type.
+    - Enter your Extension ID (find it in `chrome://extensions`).
+    - Copy the generated **Client ID**.
+    - Open `manifest.json` in the project root and replace `"YOUR_GOOGLE_CLIENT_ID_HERE..."` with your ID.
+    - Run `npm run build` and reload the extension.
 
 ### Loading the Extension
 1. Run `npm run build`

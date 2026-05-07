@@ -14,9 +14,17 @@
   "background": {
     "service_worker": "src/background.ts"
   },
+  "oauth2": {
+    "client_id": "75741279554-kb6g88m7fmhrpbf9ko3u0jv1qj1t07as.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/tasks",
+      "https://www.googleapis.com/auth/calendar.readonly"
+    ]
+  },
   "host_permissions": [
     "https://api.openweathermap.org/*",
     "https://api.spotify.com/*",
-    "https://accounts.spotify.com/*"
+    "https://accounts.spotify.com/*",
+    "https://www.googleapis.com/*"
   ]
 }

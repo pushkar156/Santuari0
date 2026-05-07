@@ -11,7 +11,8 @@ import { useWidgetStore } from '../../store/widgetStore';
 import { useViewStore, ViewType } from '../../store/viewStore';
 import { NavigationRail } from './NavigationRail';
 import PlaceholderView from '../views/PlaceholderView';
-import { CheckSquare, Calendar, Bookmark, HardDrive, Bot } from 'lucide-react';
+import { TasksView } from '../views/TasksView';
+import { Calendar, Bookmark, HardDrive, Bot } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
 export const Dashboard = () => {
@@ -35,7 +36,7 @@ export const Dashboard = () => {
   const renderViewContent = (view: ViewType) => {
     switch (view) {
       case 'tasks':
-        return <PlaceholderView title="Google Tasks" icon={<CheckSquare size={32} />} />;
+        return <TasksView />;
       case 'calendar':
         return <PlaceholderView title="Google Calendar" icon={<Calendar size={32} />} />;
       case 'bookmarks':
