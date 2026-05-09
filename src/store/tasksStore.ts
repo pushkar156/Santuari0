@@ -17,9 +17,11 @@ interface TasksState {
   fetchTasks: (listId: string) => Promise<void>;
   setActiveList: (listId: string) => void;
   addTask: (title: string) => Promise<void>;
+  createList: (title: string) => Promise<void>;
   toggleTask: (taskId: string) => Promise<void>;
   removeTask: (taskId: string) => Promise<void>;
   sync: (interactive?: boolean) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<GoogleTask>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -53,8 +55,18 @@ export const useTasksStore = create<TasksState>()(
         try {
           const lists = await GoogleTasksService.listTaskLists(interactive);
           set({ lists, isAuthenticated: true });
-          if (lists.length > 0 && !get().activeListId) {
-            set({ activeListId: lists[0].id });
+          
+          if (lists.length > 0) {
+            const currentActiveId = get().activeListId;
+            const newActiveId = currentActiveId && lists.some(l => l.id === currentActiveId) 
+              ? currentActiveId 
+              : lists[0].id;
+            
+            set({ activeListId: newActiveId });
+            
+            // Fetch tasks for all lists in background
+            // Use allSettled to ensure one list failure doesn't block the rest
+            await Promise.allSettled(lists.map(list => get().fetchTasks(list.id)));
           }
         } catch (err) {
           set({ error: (err as Error).message, isAuthenticated: false });
@@ -64,7 +76,11 @@ export const useTasksStore = create<TasksState>()(
       },
 
       fetchTasks: async (listId) => {
-        set({ isLoading: true, error: null });
+        // Only set isLoading if it's the active list to avoid UI flicker
+        if (get().activeListId === listId) {
+          set({ isLoading: true, error: null });
+        }
+        
         try {
           const tasks = await GoogleTasksService.listTasks(listId);
           set((state) => ({
@@ -74,7 +90,9 @@ export const useTasksStore = create<TasksState>()(
         } catch (err) {
           set({ error: (err as Error).message });
         } finally {
-          set({ isLoading: false });
+          if (get().activeListId === listId) {
+            set({ isLoading: false });
+          }
         }
       },
 
@@ -102,6 +120,56 @@ export const useTasksStore = create<TasksState>()(
         }
       },
 
+      createList: async (title) => {
+        set({ isLoading: true, error: null });
+        try {
+          const newList = await GoogleTasksService.createTaskList(title);
+          set((state) => ({
+            lists: [newList, ...state.lists],
+            activeListId: newList.id,
+          }));
+          await get().fetchTasks(newList.id);
+        } catch (err) {
+          set({ error: (err as Error).message });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      updateTask: async (taskId, updates) => {
+        const { activeListId, tasksByList } = get();
+        if (!activeListId) return;
+
+        const tasks = tasksByList[activeListId] || [];
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        // Optimistic update
+        set((state) => ({
+          tasksByList: {
+            ...state.tasksByList,
+            [activeListId]: state.tasksByList[activeListId].map((t) =>
+              t.id === taskId ? { ...t, ...updates } : t
+            ),
+          },
+        }));
+
+        try {
+          await GoogleTasksService.updateTask(activeListId, taskId, updates);
+        } catch (err) {
+          // Revert on error
+          set((state) => ({
+            tasksByList: {
+              ...state.tasksByList,
+              [activeListId]: state.tasksByList[activeListId].map((t) =>
+                t.id === taskId ? task : t
+              ),
+            },
+            error: (err as Error).message,
+          }));
+        }
+      },
+
       toggleTask: async (taskId) => {
         const { activeListId, tasksByList } = get();
         if (!activeListId) return;
@@ -112,30 +180,7 @@ export const useTasksStore = create<TasksState>()(
 
         const newStatus = task.status === 'completed' ? 'needsAction' : 'completed';
 
-        // Optimistic update
-        set((state) => ({
-          tasksByList: {
-            ...state.tasksByList,
-            [activeListId]: state.tasksByList[activeListId].map((t) =>
-              t.id === taskId ? { ...t, status: newStatus } : t
-            ),
-          },
-        }));
-
-        try {
-          await GoogleTasksService.updateTask(activeListId, taskId, { status: newStatus });
-        } catch (err) {
-          // Revert on error
-          set((state) => ({
-            tasksByList: {
-              ...state.tasksByList,
-              [activeListId]: state.tasksByList[activeListId].map((t) =>
-                t.id === taskId ? { ...t, status: task.status } : t
-              ),
-            },
-            error: (err as Error).message,
-          }));
-        }
+        await get().updateTask(taskId, { status: newStatus });
       },
 
       removeTask: async (taskId) => {

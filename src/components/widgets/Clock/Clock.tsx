@@ -139,9 +139,10 @@ export const Clock = () => {
           <motion.circle 
             cx="100" cy="100" r="3" 
             fill="var(--color-1)"
-            animate={{ r: [3, 4, 3] }}
+            animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.3 }}
             key={s}
+            style={{ originX: "100px", originY: "100px" }}
           />
           <circle cx="100" cy="100" r="1.5" fill="var(--theme-contrast)" />
         </svg>

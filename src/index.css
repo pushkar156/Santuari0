@@ -5,12 +5,12 @@
 @layer base {
   :root {
     --theme-text: #ffffff;
-    --theme-muted: rgba(255, 255, 255, 0.7);
-    --theme-glass: rgba(255, 255, 255, 0.1);
-    --theme-border: rgba(255, 255, 255, 0.2);
-    --theme-hover: rgba(255, 255, 255, 0.2);
+    --theme-muted: #94a3b8;
+    --theme-glass: #141721;
+    --theme-border: #1e293b;
+    --theme-hover: #1e222e;
     --theme-bg-accent: #ffffff;
-    --theme-contrast: #0f172a;
+    --theme-contrast: #020617;
     
     /* Gooey Nav Colors - Dark Mode (White Only) */
     --color-1: #ffffff;
@@ -42,7 +42,7 @@
 
 @layer utilities {
   .theme-glass {
-    @apply bg-theme-glass backdrop-blur-md border border-theme-border rounded-2xl shadow-xl transition-colors duration-300;
+    @apply bg-theme-glass border border-theme-border rounded-2xl shadow-xl transition-colors duration-300;
   }
   
   .theme-zen {
