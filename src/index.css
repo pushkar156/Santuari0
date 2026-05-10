@@ -7,6 +7,7 @@
     --theme-text: #ffffff;
     --theme-muted: rgba(255, 255, 255, 0.7);
     --theme-glass: rgba(255, 255, 255, 0.1);
+    --theme-bg: rgba(15, 23, 42, 0.4);
     --theme-border: rgba(255, 255, 255, 0.2);
     --theme-hover: rgba(255, 255, 255, 0.2);
     --theme-bg-accent: #ffffff;
@@ -20,12 +21,13 @@
   }
   
   .light-mode {
-    --theme-text: #000000;
-    --theme-muted: rgba(0, 0, 0, 0.7);
-    --theme-glass: rgba(255, 255, 255, 0.4);
-    --theme-border: rgba(0, 0, 0, 0.1);
-    --theme-hover: rgba(255, 255, 255, 0.6);
-    --theme-bg-accent: #000000;
+    --theme-bg: rgba(255, 255, 255, 0.4);
+    --theme-text: #020617; /* Slate 950 - Dark Grey/Black */
+    --theme-muted: #475569; /* Slate 600 */
+    --theme-glass: rgba(255, 255, 255, 0.65);
+    --theme-border: rgba(0, 0, 0, 0.12);
+    --theme-hover: rgba(0, 0, 0, 0.05);
+    --theme-bg-accent: #020617;
     --theme-contrast: #ffffff;
 
     /* Gooey Nav Colors - Light Mode (Solid Black) */
@@ -42,7 +44,12 @@
 
 @layer utilities {
   .theme-glass {
-    @apply bg-theme-glass backdrop-blur-md border border-theme-border rounded-2xl shadow-xl transition-colors duration-300;
+    @apply bg-theme-glass backdrop-blur-3xl border border-theme-border rounded-2xl shadow-xl transition-all duration-300;
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .light-mode .theme-glass {
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.8), 0 10px 30px -10px rgba(0, 0, 0, 0.1);
   }
   
   .theme-zen {
@@ -81,9 +88,17 @@
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+
+  .custom-scrollbar-thin::-webkit-scrollbar {
+    width: 3px;
+  }
+  .custom-scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar-thin::-webkit-scrollbar-thumb {
     background: var(--theme-muted);
-    background-clip: padding-box;
+    border-radius: 10px;
+    opacity: 0.3;
   }
 }
 

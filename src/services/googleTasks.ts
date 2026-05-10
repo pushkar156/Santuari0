@@ -14,6 +14,7 @@ export interface GoogleTask {
   updated: string;
   parent?: string;
   position: string;
+  starred?: boolean;
 }
 
 export interface GoogleTaskList {
@@ -81,11 +82,15 @@ export class GoogleTasksService {
   /**
    * Create a new task in a list
    */
-  static async createTask(listId: string, title: string): Promise<GoogleTask> {
-    const response = await this.fetchWithAuth(`${BASE_URL}/lists/${listId}/tasks`, {
+  static async createTask(listId: string, task: Partial<GoogleTask>, parent?: string, previous?: string): Promise<GoogleTask> {
+    let url = `${BASE_URL}/lists/${listId}/tasks?`;
+    if (parent) url += `parent=${parent}&`;
+    if (previous) url += `previous=${previous}`;
+
+    const response = await this.fetchWithAuth(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, status: 'needsAction' }),
+      body: JSON.stringify({ ...task, status: 'needsAction' }),
     });
     if (!response.ok) throw new Error('Failed to create task');
     return response.json();
@@ -105,6 +110,21 @@ export class GoogleTasksService {
   }
 
   /**
+   * Move a task (for reordering)
+   * parent: optional new parent
+   * previous: optional taskId after which the task should be placed
+   */
+  static async moveTask(listId: string, taskId: string, parent?: string, previous?: string): Promise<GoogleTask> {
+    let url = `${BASE_URL}/lists/${listId}/tasks/${taskId}/move?`;
+    if (parent) url += `parent=${parent}&`;
+    if (previous) url += `previous=${previous}`;
+    
+    const response = await this.fetchWithAuth(url, { method: 'POST' });
+    if (!response.ok) throw new Error('Failed to move task');
+    return response.json();
+  }
+
+  /**
    * Delete a task
    */
   static async deleteTask(listId: string, taskId: string): Promise<void> {
@@ -115,12 +135,50 @@ export class GoogleTasksService {
   }
 
   /**
+   * Create a new task list
+   */
+  static async createTaskList(title: string): Promise<GoogleTaskList> {
+    const response = await this.fetchWithAuth(`${BASE_URL}/users/@me/lists`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    if (!response.ok) throw new Error('Failed to create task list');
+    return response.json();
+  }
+
+  /**
+   * Update a task list title
+   */
+  static async updateTaskList(listId: string, title: string): Promise<GoogleTaskList> {
+    const response = await this.fetchWithAuth(`${BASE_URL}/users/@me/lists/${listId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    if (!response.ok) throw new Error('Failed to update task list');
+    return response.json();
+  }
+
+  /**
+   * Delete a task list
+   */
+  static async deleteTaskList(listId: string): Promise<void> {
+    const response = await this.fetchWithAuth(`${BASE_URL}/users/@me/lists/${listId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete task list');
+  }
+
+  /**
    * Sign out (remove token)
    */
   static async signOut(): Promise<void> {
     const token = await this.getAuthToken();
-    return new Promise((resolve) => {
-      chrome.identity.removeCachedAuthToken({ token }, () => resolve());
-    });
+    if (token) {
+      return new Promise((resolve) => {
+        chrome.identity.removeCachedAuthToken({ token }, () => resolve());
+      });
+    }
   }
 }

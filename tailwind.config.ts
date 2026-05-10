@@ -15,6 +15,7 @@ export default {
           hover: 'var(--theme-hover)',
           'bg-accent': 'var(--theme-bg-accent)',
           contrast: 'var(--theme-contrast)',
+          bg: 'var(--theme-bg)',
         }
       }
     },

@@ -7,8 +7,11 @@ import {
   X, 
   Eye, 
   EyeOff, 
-  MapPin
+  MapPin,
+  ListTodo,
+  Loader2
 } from 'lucide-react';
+import { useTasksStore } from '../../store/tasksStore';
 import { SpotifyService } from '../../lib/spotify';
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -29,6 +32,13 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
   const [showSpotifyId, setShowSpotifyId] = useState(false);
   const [showWeatherKey, setShowWeatherKey] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const { 
+    isAuthenticated: googleAuthenticated, 
+    sync: syncGoogleTasks, 
+    logout: logoutGoogleTasks,
+    isLoading: isGoogleLoading
+  } = useTasksStore();
+
   const mode = useWidgetStore(state => state.mode);
 
   const handleClose = () => {
@@ -155,7 +165,7 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             {/* Column 1: Spotify */}
             <div className="space-y-6">
               <label className="text-sm font-bold uppercase tracking-widest text-theme-muted flex items-center gap-2">
@@ -261,6 +271,34 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
                 </div>
                 <p className="text-xs text-theme-muted">
                   Get Key: <a href="https://home.openweathermap.org/api_keys" target="_blank" rel="noopener noreferrer" className="select-all bg-theme-glass px-2 py-1 rounded hover:text-theme-text transition-colors underline decoration-theme-border">https://home.openweathermap.org/api_keys</a>
+                </p>
+              </div>
+            </div>
+
+            {/* Column 3: Google Tasks */}
+            <div className="space-y-6">
+              <label className="text-sm font-bold uppercase tracking-widest text-theme-muted flex items-center gap-2">
+                <ListTodo size={16} /> Google Tasks
+              </label>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => syncGoogleTasks(true)}
+                    disabled={googleAuthenticated || isGoogleLoading}
+                    className={`py-4 rounded-xl font-bold transition-all text-lg flex items-center justify-center gap-2 ${googleAuthenticated ? 'bg-blue-500/10 text-blue-500 cursor-not-allowed border border-blue-500/20' : 'bg-[#4285F4] text-white hover:bg-[#357ae8] shadow-lg shadow-[#4285F4]/20'}`}
+                  >
+                    {isGoogleLoading ? <Loader2 className="animate-spin" size={20} /> : (googleAuthenticated ? 'Connected' : 'Connect')}
+                  </button>
+                  <button 
+                    onClick={logoutGoogleTasks}
+                    disabled={!googleAuthenticated}
+                    className={`py-4 rounded-xl font-bold transition-all text-lg ${!googleAuthenticated ? 'bg-red-500/10 text-red-500/50 cursor-not-allowed border border-red-500/20' : 'bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500/30'}`}
+                  >
+                    Logout
+                  </button>
+                </div>
+                <p className="text-xs text-theme-muted">
+                  Sync your tasks with Google Tasks to access them across all your Google Workspace apps.
                 </p>
               </div>
             </div>

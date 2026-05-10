@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { GoogleCalendarService, CalendarEvent, GoogleCalendar } from '../services/googleCalendar';
+import { GoogleCalendarService, GoogleCalendar, CalendarEvent } from '../services/googleCalendar';
 import { storage as extensionStorage } from '../lib/storage';
 
 interface CalendarState {
@@ -14,8 +14,11 @@ interface CalendarState {
   // Actions
   setAuthenticated: (status: boolean) => void;
   fetchCalendars: (interactive?: boolean) => Promise<void>;
-  fetchEvents: (calendarId?: string) => Promise<void>;
+  fetchEvents: (calendarId: string) => Promise<void>;
   setActiveCalendar: (calendarId: string) => void;
+  addEvent: (event: Partial<CalendarEvent>) => Promise<void>;
+  updateEvent: (eventId: string, updates: Partial<CalendarEvent>) => Promise<void>;
+  removeEvent: (eventId: string) => Promise<void>;
   sync: (interactive?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -50,6 +53,10 @@ export const useCalendarStore = create<CalendarState>()(
         try {
           const calendars = await GoogleCalendarService.listCalendars(interactive);
           set({ calendars, isAuthenticated: true });
+          if (calendars.length > 0 && get().activeCalendarId === 'primary') {
+            const primary = calendars.find(c => c.primary);
+            if (primary) set({ activeCalendarId: primary.id });
+          }
         } catch (err) {
           set({ error: (err as Error).message, isAuthenticated: false });
         } finally {
@@ -57,7 +64,7 @@ export const useCalendarStore = create<CalendarState>()(
         }
       },
 
-      fetchEvents: async (calendarId = 'primary') => {
+      fetchEvents: async (calendarId) => {
         set({ isLoading: true, error: null });
         try {
           const events = await GoogleCalendarService.listEvents(calendarId);
@@ -79,6 +86,73 @@ export const useCalendarStore = create<CalendarState>()(
         }
       },
 
+      addEvent: async (event) => {
+        const { activeCalendarId } = get();
+        set({ isLoading: true, error: null });
+        try {
+          await GoogleCalendarService.createEvent(activeCalendarId, event);
+          await get().fetchEvents(activeCalendarId);
+        } catch (err) {
+          set({ error: (err as Error).message });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      updateEvent: async (eventId, updates) => {
+        const { activeCalendarId, eventsByCalendar } = get();
+        const originalEvents = eventsByCalendar[activeCalendarId] || [];
+
+        // Optimistic update
+        set((state) => ({
+          eventsByCalendar: {
+            ...state.eventsByCalendar,
+            [activeCalendarId]: originalEvents.map((e) =>
+              e.id === eventId ? { ...e, ...updates } : e
+            ),
+          },
+        }));
+
+        try {
+          await GoogleCalendarService.updateEvent(activeCalendarId, eventId, updates);
+        } catch (err) {
+          // Revert on error
+          set((state) => ({
+            eventsByCalendar: {
+              ...state.eventsByCalendar,
+              [activeCalendarId]: originalEvents,
+            },
+            error: (err as Error).message,
+          }));
+        }
+      },
+
+      removeEvent: async (eventId) => {
+        const { activeCalendarId, eventsByCalendar } = get();
+        const originalEvents = eventsByCalendar[activeCalendarId] || [];
+
+        // Optimistic update
+        set((state) => ({
+          eventsByCalendar: {
+            ...state.eventsByCalendar,
+            [activeCalendarId]: originalEvents.filter((e) => e.id !== eventId),
+          },
+        }));
+
+        try {
+          await GoogleCalendarService.deleteEvent(activeCalendarId, eventId);
+        } catch (err) {
+          // Revert on error
+          set((state) => ({
+            eventsByCalendar: {
+              ...state.eventsByCalendar,
+              [activeCalendarId]: originalEvents,
+            },
+            error: (err as Error).message,
+          }));
+        }
+      },
+
       sync: async (interactive = true) => {
         await get().fetchCalendars(interactive);
         const { activeCalendarId } = get();
@@ -86,15 +160,18 @@ export const useCalendarStore = create<CalendarState>()(
       },
 
       logout: async () => {
-        // Since both Task and Calendar use the same chrome.identity token,
-        // logging out of one effectively logs out of both.
-        // We'll just clear the local state here.
-        set({
-          calendars: [],
-          eventsByCalendar: {},
-          activeCalendarId: 'primary',
-          isAuthenticated: false,
-        });
+        try {
+          await GoogleCalendarService.signOut();
+        } catch (err) {
+          console.error('Sign out error:', err);
+        } finally {
+          set({
+            calendars: [],
+            eventsByCalendar: {},
+            activeCalendarId: 'primary',
+            isAuthenticated: false,
+          });
+        }
       },
     }),
     {
