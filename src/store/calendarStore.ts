@@ -6,7 +6,7 @@ import { storage as extensionStorage } from '../lib/storage';
 interface CalendarState {
   calendars: GoogleCalendar[];
   eventsByCalendar: Record<string, CalendarEvent[]>;
-  activeCalendarId: string;
+  visibleCalendarIds: string[];
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
@@ -16,6 +16,7 @@ interface CalendarState {
   fetchCalendars: (interactive?: boolean) => Promise<void>;
   fetchEvents: (calendarId: string) => Promise<void>;
   setActiveCalendar: (calendarId: string) => void;
+  toggleCalendarVisibility: (calendarId: string) => void;
   addEvent: (event: Partial<CalendarEvent>) => Promise<void>;
   updateEvent: (eventId: string, updates: Partial<CalendarEvent>) => Promise<void>;
   removeEvent: (eventId: string) => Promise<void>;
@@ -41,7 +42,7 @@ export const useCalendarStore = create<CalendarState>()(
     (set, get) => ({
       calendars: [],
       eventsByCalendar: {},
-      activeCalendarId: 'primary',
+      visibleCalendarIds: ['primary'],
       isLoading: false,
       error: null,
       isAuthenticated: false,
@@ -53,9 +54,12 @@ export const useCalendarStore = create<CalendarState>()(
         try {
           const calendars = await GoogleCalendarService.listCalendars(interactive);
           set({ calendars, isAuthenticated: true });
-          if (calendars.length > 0 && get().activeCalendarId === 'primary') {
+          
+          // Initialize visible calendars if empty
+          const { visibleCalendarIds } = get();
+          if (visibleCalendarIds.length === 0 || (visibleCalendarIds.length === 1 && visibleCalendarIds[0] === 'primary')) {
             const primary = calendars.find(c => c.primary);
-            if (primary) set({ activeCalendarId: primary.id });
+            if (primary) set({ visibleCalendarIds: [primary.id] });
           }
         } catch (err) {
           set({ error: (err as Error).message, isAuthenticated: false });
@@ -80,18 +84,39 @@ export const useCalendarStore = create<CalendarState>()(
       },
 
       setActiveCalendar: (calendarId) => {
-        set({ activeCalendarId: calendarId });
+        // In this multi-view mode, "Active" means it's the target for new events
+        // and it's definitely visible.
+        const { visibleCalendarIds } = get();
+        if (!visibleCalendarIds.includes(calendarId)) {
+          set({ visibleCalendarIds: [...visibleCalendarIds, calendarId] });
+        }
+        
         if (!get().eventsByCalendar[calendarId]) {
           get().fetchEvents(calendarId);
         }
       },
 
+      toggleCalendarVisibility: (calendarId) => {
+        const { visibleCalendarIds } = get();
+        const isVisible = visibleCalendarIds.includes(calendarId);
+        
+        if (isVisible) {
+          set({ visibleCalendarIds: visibleCalendarIds.filter(id => id !== calendarId) });
+        } else {
+          set({ visibleCalendarIds: [...visibleCalendarIds, calendarId] });
+          if (!get().eventsByCalendar[calendarId]) {
+            get().fetchEvents(calendarId);
+          }
+        }
+      },
+
       addEvent: async (event) => {
-        const { activeCalendarId } = get();
+        // We use the first visible calendar as the default for new events if none specified
+        const targetCalendarId = get().visibleCalendarIds[0] || 'primary';
         set({ isLoading: true, error: null });
         try {
-          await GoogleCalendarService.createEvent(activeCalendarId, event);
-          await get().fetchEvents(activeCalendarId);
+          await GoogleCalendarService.createEvent(targetCalendarId, event);
+          await get().fetchEvents(targetCalendarId);
         } catch (err) {
           set({ error: (err as Error).message });
         } finally {
@@ -100,27 +125,38 @@ export const useCalendarStore = create<CalendarState>()(
       },
 
       updateEvent: async (eventId, updates) => {
-        const { activeCalendarId, eventsByCalendar } = get();
-        const originalEvents = eventsByCalendar[activeCalendarId] || [];
+        // Find which calendar this event belongs to
+        const { eventsByCalendar } = get();
+        let targetCalendarId = '';
+        for (const [calId, events] of Object.entries(eventsByCalendar)) {
+          if (events.find(e => e.id === eventId)) {
+            targetCalendarId = calId;
+            break;
+          }
+        }
+
+        if (!targetCalendarId) return;
+
+        const originalEvents = eventsByCalendar[targetCalendarId] || [];
 
         // Optimistic update
         set((state) => ({
           eventsByCalendar: {
             ...state.eventsByCalendar,
-            [activeCalendarId]: originalEvents.map((e) =>
+            [targetCalendarId]: originalEvents.map((e) =>
               e.id === eventId ? { ...e, ...updates } : e
             ),
           },
         }));
 
         try {
-          await GoogleCalendarService.updateEvent(activeCalendarId, eventId, updates);
+          await GoogleCalendarService.updateEvent(targetCalendarId, eventId, updates);
         } catch (err) {
           // Revert on error
           set((state) => ({
             eventsByCalendar: {
               ...state.eventsByCalendar,
-              [activeCalendarId]: originalEvents,
+              [targetCalendarId]: originalEvents,
             },
             error: (err as Error).message,
           }));
@@ -128,25 +164,35 @@ export const useCalendarStore = create<CalendarState>()(
       },
 
       removeEvent: async (eventId) => {
-        const { activeCalendarId, eventsByCalendar } = get();
-        const originalEvents = eventsByCalendar[activeCalendarId] || [];
+        const { eventsByCalendar } = get();
+        let targetCalendarId = '';
+        for (const [calId, events] of Object.entries(eventsByCalendar)) {
+          if (events.find(e => e.id === eventId)) {
+            targetCalendarId = calId;
+            break;
+          }
+        }
+
+        if (!targetCalendarId) return;
+
+        const originalEvents = eventsByCalendar[targetCalendarId] || [];
 
         // Optimistic update
         set((state) => ({
           eventsByCalendar: {
             ...state.eventsByCalendar,
-            [activeCalendarId]: originalEvents.filter((e) => e.id !== eventId),
+            [targetCalendarId]: originalEvents.filter((e) => e.id !== eventId),
           },
         }));
 
         try {
-          await GoogleCalendarService.deleteEvent(activeCalendarId, eventId);
+          await GoogleCalendarService.deleteEvent(targetCalendarId, eventId);
         } catch (err) {
           // Revert on error
           set((state) => ({
             eventsByCalendar: {
               ...state.eventsByCalendar,
-              [activeCalendarId]: originalEvents,
+              [targetCalendarId]: originalEvents,
             },
             error: (err as Error).message,
           }));
@@ -155,8 +201,9 @@ export const useCalendarStore = create<CalendarState>()(
 
       sync: async (interactive = true) => {
         await get().fetchCalendars(interactive);
-        const { activeCalendarId } = get();
-        await get().fetchEvents(activeCalendarId);
+        const { calendars } = get();
+        // Fetch events for ALL calendars so toggling is instant and all data is ready
+        await Promise.all(calendars.map(c => get().fetchEvents(c.id)));
       },
 
       logout: async () => {
@@ -168,7 +215,7 @@ export const useCalendarStore = create<CalendarState>()(
           set({
             calendars: [],
             eventsByCalendar: {},
-            activeCalendarId: 'primary',
+            visibleCalendarIds: ['primary'],
             isAuthenticated: false,
           });
         }

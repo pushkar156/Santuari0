@@ -80,35 +80,43 @@ export class GoogleCalendarService {
   /**
    * Fetch events for a specific calendar
    */
-  static async listEvents(
-    calendarId: string = 'primary', 
-    timeMin: string = new Date().toISOString(),
-    timeMax?: string,
-    maxResults: number = 250
-  ): Promise<CalendarEvent[]> {
-    let allEvents: CalendarEvent[] = [];
-    let pageToken: string | undefined;
+  static async listEvents(calendarId: string = 'primary'): Promise<CalendarEvent[]> {
+    const token = await this.getAuthToken();
+    
+    // Expand range: 6 months back, 6 months forward for better coverage
+    const timeMin = new Date();
+    timeMin.setMonth(timeMin.getMonth() - 6);
+    const timeMax = new Date();
+    timeMax.setMonth(timeMax.getMonth() + 6);
 
-    do {
-      const url = new URL(`${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events`);
-      url.searchParams.append('timeMin', timeMin);
-      url.searchParams.append('singleEvents', 'true');
-      url.searchParams.append('orderBy', 'startTime');
-      url.searchParams.append('maxResults', maxResults.toString());
-      if (timeMax) url.searchParams.append('timeMax', timeMax);
-      if (pageToken) url.searchParams.append('pageToken', pageToken);
+    const fetchPage = async (pageToken?: string): Promise<CalendarEvent[]> => {
+      let url = `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=2500`;
+      if (pageToken) url += `&pageToken=${pageToken}`;
 
-      const response = await this.fetchWithAuth(url.toString());
-      if (!response.ok) throw new Error('Failed to fetch events');
-      
-      const data = await response.json();
-      if (data.items) {
-        allEvents = [...allEvents, ...data.items];
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          await chrome.identity.removeCachedAuthToken({ token });
+          return this.listEvents(calendarId);
+        }
+        throw new Error('Failed to fetch events');
       }
-      pageToken = data.nextPageToken;
-    } while (pageToken);
 
-    return allEvents;
+      const data = await response.json();
+      const events = data.items || [];
+      if (data.nextPageToken) {
+        return [...events, ...await fetchPage(data.nextPageToken)];
+      }
+      return events;
+    };
+
+    return fetchPage();
   }
 
   /**
