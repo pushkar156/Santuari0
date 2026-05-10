@@ -13,7 +13,9 @@ import { NavigationRail } from './NavigationRail';
 import PlaceholderView from '../views/PlaceholderView';
 import { TasksView } from '../views/TasksView';
 import { CalendarView } from '../views/CalendarView';
-import { Bookmark, HardDrive, Bot } from 'lucide-react';
+import { BookmarksView } from '../views/BookmarksView';
+import { DriveView } from '../views/DriveView';
+import { Bot } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
 export const Dashboard = () => {
@@ -41,9 +43,9 @@ export const Dashboard = () => {
       case 'calendar':
         return <CalendarView />;
       case 'bookmarks':
-        return <PlaceholderView title="Bookmarks Organizer" icon={<Bookmark size={32} />} />;
+        return <BookmarksView />;
       case 'drive':
-        return <PlaceholderView title="Local Drive" icon={<HardDrive size={32} />} />;
+        return <DriveView />;
       case 'ovi':
         return <PlaceholderView title="OVI AI Assistant" icon={<Bot size={32} />} />;
       case 'home':

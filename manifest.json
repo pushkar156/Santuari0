@@ -9,7 +9,9 @@
   "permissions": [
     "storage",
     "identity",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "bookmarks",
+    "favicon"
   ],
   "background": {
     "service_worker": "src/background.ts"

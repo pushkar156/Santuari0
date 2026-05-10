@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Trash2, ListTodo, Hash,
-  RefreshCw, LogOut, Loader2, Calendar, Menu,
+  Plus, Trash2, ListTodo,
+  RefreshCw, LogOut, Loader2, Menu,
   StickyNote, Star, ChevronRight, ChevronDown, X,
   MoreVertical, Edit2, Check, LayoutGrid, Settings as SettingsIcon,
-  Clock, AlertCircle, ArrowRightLeft, CheckCheck
+  Clock, CheckCheck
 } from 'lucide-react';
 import { useViewStore } from '../../store/viewStore';
 import {
@@ -73,13 +73,13 @@ export const TasksView: React.FC = () => {
     lists, tasksByList, isLoading, isAuthenticated,
     fetchLists, setActiveList, addTask, toggleTask, updateTaskDetail,
     moveTask, removeTask, sync, logout, createList, updateList, deleteList,
-    clearCompleted, toggleStarred, moveTaskToList,
-    visibleListIds, toggleListVisibility, setVisibleListIds,
+    clearCompleted, moveTaskToList,
+    visibleListIds, toggleListVisibility,
     showTodayColumn, setShowTodayColumn,
     showStarredColumn, setShowStarredColumn,
   } = useTasksStore();
-
-  const { todos: localTodos, addTodo: addLocalTodo, toggleTodo: toggleLocalTodo, removeTodo: removeLocalTodo } = useWidgetStore();
+  const { todos: localTodos } = useWidgetStore();
+  const { setActiveView } = useViewStore();
 
   const [showLocal, setShowLocal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -91,6 +91,7 @@ export const TasksView: React.FC = () => {
   const [editingListTitle, setEditingListTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Initial Sync Logic
   useEffect(() => {
     if (isAuthenticated && lists.length === 0) fetchLists();
   }, [isAuthenticated, lists.length, fetchLists]);
@@ -102,7 +103,7 @@ export const TasksView: React.FC = () => {
         if (!tasksByList[list.id]) setActiveList(list.id);
       });
     }
-  }, [lists, isAuthenticated]);
+  }, [lists, isAuthenticated, tasksByList, setActiveList]);
 
   const allTasks = useMemo(() => Object.values(tasksByList).flat(), [tasksByList]);
   const selectedTask = !showLocal && selectedTaskId ? allTasks.find(t => t.id === selectedTaskId) : null;
@@ -116,598 +117,267 @@ export const TasksView: React.FC = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragEnd = (listId: string) => (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent, listId: string) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const tasks = tasksByList[listId] || [];
-    const oldIndex = tasks.findIndex(t => t.id === active.id);
-    const newIndex = tasks.findIndex(t => t.id === over.id);
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const prev = newIndex > oldIndex ? tasks[newIndex] : tasks[newIndex - 1];
-      moveTask(active.id as string, tasks[newIndex].parent, prev?.id);
+    if (over && active.id !== over.id) {
+      const listTasks = tasksByList[listId] || [];
+      const oldIndex = listTasks.findIndex(t => t.id === active.id);
+      const newIndex = listTasks.findIndex(t => t.id === over.id);
+      onDragEnd(listId, oldIndex, newIndex);
     }
   };
 
-  const handleToggleVisibility = (listId: string) => toggleListVisibility(listId);
+  const onDragEnd = (listId: string, oldIndex: number, newIndex: number) => {
+    const listTasks = tasksByList[listId] || [];
+    const task = listTasks[oldIndex];
+    const target = listTasks[newIndex];
+    moveTask(listId, task.id, target.id);
+  };
 
   const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newListTitle.trim()) return;
-    await createList(newListTitle.trim());
-    setNewListTitle('');
-    setIsCreatingList(false);
+    if (newListTitle.trim()) {
+      await createList(newListTitle.trim());
+      setNewListTitle('');
+      setIsCreatingList(false);
+    }
   };
 
-  const handleRenameList = async (id: string, e: React.FormEvent) => {
+  const handleRenameList = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingListTitle.trim()) {
-      await updateList(id, editingListTitle.trim());
+    if (editingListId && editingListTitle.trim()) {
+      await updateList(editingListId, editingListTitle.trim());
+      setEditingListId(null);
     }
-    setEditingListId(null);
   };
-
-  const handleToggle = (id: string) => showLocal ? toggleLocalTodo(id) : toggleTask(id);
-  const handleRemove = (id: string) => { if (showLocal) removeLocalTodo(id); else removeTask(id); };
-  const handleUpdate = (id: string, updates: Partial<GoogleTask>) => {
-    if (showLocal) return;
-    // Route star toggles through dedicated action so they persist across syncs
-    if ('starred' in updates) {
-      toggleStarred(id);
-      return;
-    }
-    updateTaskDetail(id, updates);
-  };
-
-  const { setActiveView } = useViewStore();
-
-  const starredTasks = allTasks.filter(t => t.starred && t.status !== 'completed');
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayTasks = allTasks.filter(t => {
-    if (t.status === 'completed') return false;
-    if (!t.due) return false;
-    return t.due.split('T')[0] <= todayStr;
-  });
-
-  // Build columns for the dashboard
-  const columns = useMemo(() => {
-    if (showLocal) {
-      return [{ id: '__local__', title: 'Local Focus', tasks: localTodos.map(t => ({ id: t.id, title: t.text, status: t.completed ? 'completed' : 'needsAction', children: [], updated: new Date().toISOString(), position: '' })) }];
-    }
-
-    const cols: { id: string; title: string; tasks: GoogleTask[] }[] = [];
-
-    // Today & Overdue smart column
-    const todayTasksSnap = allTasks.filter(t => {
-      if (t.status === 'completed') return false;
-      if (!t.due) return false;
-      const q = searchQuery.trim().toLowerCase();
-      if (q && !t.title.toLowerCase().includes(q) && !(t.notes?.toLowerCase().includes(q))) return false;
-      return t.due.split('T')[0] <= new Date().toISOString().split('T')[0];
-    });
-    if (showTodayColumn && todayTasksSnap.length > 0) {
-      cols.push({ id: '__today__', title: '📅 Today & Overdue', tasks: todayTasksSnap });
-    }
-
-    // Starred column
-    if (showStarredColumn) {
-      const starred = allTasks.filter(t => {
-        if (!t.starred || t.status === 'completed') return false;
-        const q = searchQuery.trim().toLowerCase();
-        return !q || t.title.toLowerCase().includes(q) || !!(t.notes?.toLowerCase().includes(q));
-      });
-      cols.push({ id: '__starred__', title: '⭐ Starred', tasks: starred });
-    }
-
-    // Visible user lists
-    const visibleLists = lists.filter(l => visibleListIds.includes(l.id)).map(l => {
-      let listTasks = tasksByList[l.id] || [];
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        listTasks = listTasks.filter(t =>
-          t.title.toLowerCase().includes(q) ||
-          (t.notes && t.notes.toLowerCase().includes(q))
-        );
-      }
-      return { id: l.id, title: l.title, tasks: listTasks };
-    });
-
-    return [...cols, ...visibleLists];
-  }, [showLocal, localTodos, showTodayColumn, showStarredColumn, allTasks, lists, visibleListIds, tasksByList, searchQuery]);
-
 
   if (!isAuthenticated && !showLocal) {
     return <AuthGate onConnect={() => sync()} onLocal={() => setShowLocal(true)} onSettings={() => setActiveView('settings')} />;
   }
 
+  const starredTasks = allTasks.filter((t: GoogleTask) => t.starred && t.status !== 'completed');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayTasks = allTasks.filter((t: GoogleTask) => {
+    if (t.status === 'completed') return false;
+    if (!t.due) return false;
+    return t.due.split('T')[0] <= todayStr;
+  });
+
+  // Combine Google and Local tasks for columns if needed, or handle showLocal separately
+  const displayLists = showLocal ? [{ id: 'local', title: 'Local Tasks' }] : lists;
+  const displayTasksByList = showLocal ? { 'local': localTodos.map(t => ({ id: t.id, title: t.text, status: t.completed ? 'completed' : 'needsAction', starred: false, notes: '', updated: '', selfLink: '', parent: undefined, position: '', due: undefined } as GoogleTask)) } : tasksByList;
+
+
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-theme-bg">
-      {/* ── Sidebar ────────────────────────────────────────── */}
-      {/* ── Sidebar Overlay ────────────────────────────────── */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSidebarOpen(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-40 lg:hidden"
-            />
-            <motion.aside
-              initial={{ x: -300, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -300, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="absolute lg:relative left-0 top-0 h-full w-[320px] bg-theme-bg/95 backdrop-blur-3xl border-r border-theme-border flex flex-col overflow-hidden z-50 shadow-2xl"
-            >
-            <div className="p-8 flex flex-col h-full">
-              {/* Sidebar Header */}
-              <div className="flex items-center justify-between mb-10">
+    <div className="h-screen w-full flex overflow-hidden bg-theme-bg/20">
+      {/* Sidebar - Strategy #5: Pill Headers for Lists */}
+      <motion.aside
+        initial={false}
+        animate={{ width: sidebarOpen ? 320 : 0, opacity: sidebarOpen ? 1 : 0 }}
+        className="flex-shrink-0 border-r border-theme-border/30 bg-theme-bg/10 backdrop-blur-3xl overflow-hidden flex flex-col"
+      >
+        <div className="p-8 flex flex-col h-full gap-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
+              <LayoutGrid size={14} /> Workspace
+            </h2>
+            <button onClick={() => setIsCreatingList(true)} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-bg-accent transition-all">
+              <Plus size={16} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-2">
+            {/* Special Views */}
+            <div className="space-y-1 mb-6">
+              <button
+                onClick={() => setShowTodayColumn(!showTodayColumn)}
+                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[18px] transition-all group ${showTodayColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-theme-bg-accent rounded-[20px] flex items-center justify-center shadow-lg shadow-theme-bg-accent/20 rotate-3">
-                    <ListTodo size={28} className="text-theme-contrast -rotate-3" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-black text-theme-text leading-tight tracking-tight">Santuario</h1>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      <p className="text-[9px] font-black text-theme-muted uppercase tracking-[0.2em]">Connected</p>
-                    </div>
-                  </div>
+                  <Clock size={18} className={showTodayColumn ? 'text-theme-bg-accent' : 'text-theme-muted'} />
+                  <span className="text-sm font-bold">My Day</span>
                 </div>
-                <button 
-                  onClick={() => setSidebarOpen(false)}
-                  className="p-2.5 text-theme-muted hover:text-theme-text hover:bg-theme-hover rounded-2xl transition-all hover:rotate-90 duration-300"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-9 flex-1 overflow-y-auto custom-scrollbar pr-3 -mr-3">
-                {/* Starred Section - Inspired by Google Tasks */}
-                <div>
-                  <div className="flex items-center justify-between px-3 mb-4">
-                    <span className="text-[10px] font-black text-theme-muted uppercase tracking-[0.3em]">Quick Access</span>
-                    {starredTasks.length > 0 && (
-                      <span className="text-[10px] font-black text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">
-                        {starredTasks.length} Starred
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    {/* Today & Overdue toggle */}
-                    <button
-                      onClick={() => setShowTodayColumn(!showTodayColumn)}
-                      className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group ${showTodayColumn ? 'bg-blue-500/10 text-blue-400 shadow-sm border border-blue-400/20' : 'text-theme-muted hover:bg-theme-hover/50 hover:text-theme-text border border-transparent'}`}
-                    >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showTodayColumn ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-theme-hover/50 group-hover:bg-theme-hover'}`}>
-                        <Clock size={20} />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-black text-sm">Today & Overdue</p>
-                        <p className="text-[10px] opacity-60">Due now smart list</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {todayTasks.length > 0 && (
-                          <span className="text-[10px] font-black text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{todayTasks.length}</span>
-                        )}
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${showTodayColumn ? 'bg-blue-500 border-blue-500' : 'border-theme-border group-hover:border-theme-muted'}`}>
-                          {showTodayColumn && <Check size={12} className="text-white" strokeWidth={3} />}
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Starred toggle */}
-                    <button
-                      onClick={() => setShowStarredColumn(!showStarredColumn)}
-                      className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group ${showStarredColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent shadow-sm border border-theme-bg-accent/20' : 'text-theme-muted hover:bg-theme-hover/50 hover:text-theme-text border border-transparent'}`}
-                    >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showStarredColumn ? 'bg-theme-bg-accent text-theme-contrast shadow-lg shadow-theme-bg-accent/20' : 'bg-theme-hover/50 group-hover:bg-theme-hover'}`}>
-                        <Star size={20} className={showStarredColumn ? 'fill-theme-contrast' : 'group-hover:text-theme-text'} />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-black text-sm">Starred Board</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[10px] opacity-60">Priority view</p>
-                          {starredTasks.length > 0 && (
-                            <span className="w-1 h-1 rounded-full bg-yellow-500 animate-pulse" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={`text-[10px] font-black ${showStarredColumn ? 'text-theme-bg-accent' : 'text-theme-muted'}`}>{starredTasks.length}</span>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${showStarredColumn ? 'bg-theme-bg-accent border-theme-bg-accent' : 'border-theme-border group-hover:border-theme-muted'}`}>
-                          {showStarredColumn && <Check size={12} className="text-theme-contrast" strokeWidth={3} />}
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Starred Tasks Preview */}
-                    {starredTasks.length > 0 && (
-                      <div className="mt-2 pl-14 space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar-thin">
-                        {starredTasks.slice(0, 5).map(task => (
-                          <div
-                            key={task.id}
-                            onClick={() => { setSelectedTaskId(task.id); setFocusedTaskId(task.id); }}
-                            className="text-xs text-theme-muted hover:text-theme-text truncate cursor-pointer py-1 transition-colors flex items-center gap-2 group/star"
-                          >
-                            <div className="w-1 h-1 rounded-full bg-yellow-500 opacity-40 group-hover/star:opacity-100" />
-                            {task.title}
-                          </div>
-                        ))}
-                        {starredTasks.length > 5 && (
-                          <p className="text-[10px] text-theme-muted italic pl-3">+ {starredTasks.length - 5} more</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <span className="text-[10px] font-black opacity-40">{todayTasks.length}</span>
+              </button>
+              <button
+                onClick={() => setShowStarredColumn(!showStarredColumn)}
+                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[18px] transition-all group ${showStarredColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Star size={18} className={showStarredColumn ? 'text-theme-bg-accent' : 'text-theme-muted'} />
+                  <span className="text-sm font-bold">Starred</span>
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between px-3 mb-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-theme-muted uppercase tracking-[0.3em]">Dashboard Manager</span>
-                      <span className="text-[9px] text-theme-muted font-bold opacity-60">Visible: {visibleListIds.length}/{lists.length}</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const allIds = lists.map(l => l.id);
-                        setVisibleListIds(visibleListIds.length === allIds.length ? [] : allIds);
-                      }}
-                      className="text-[10px] font-black text-theme-bg-accent hover:underline decoration-2 underline-offset-4"
-                    >
-                      {visibleListIds.length === lists.length ? 'Hide All' : 'Show All'}
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    {lists.map(list => {
-                      const listTasks = tasksByList[list.id] || [];
-                      const listStarredCount = listTasks.filter(t => t.starred && t.status !== 'completed').length;
-                      const overdueCount = listTasks.filter(t => {
-                        if (t.status === 'completed' || !t.due) return false;
-                        return t.due.split('T')[0] < new Date().toISOString().split('T')[0];
-                      }).length;
-                      const isVisible = visibleListIds.includes(list.id);
-                      
-                      return (
-                        <div key={list.id} className="group/list flex items-center gap-2">
-                          <button
-                            onClick={() => handleToggleVisibility(list.id)}
-                            className={`flex-1 flex items-center gap-4 px-4 py-3 rounded-2xl transition-all ${isVisible ? 'bg-theme-bg-accent/5 text-theme-text' : 'text-theme-muted hover:bg-theme-hover/30 hover:text-theme-text'}`}
-                          >
-                            <div className={`flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isVisible ? 'bg-theme-bg-accent border-theme-bg-accent shadow-lg shadow-theme-bg-accent/20 scale-110' : 'border-theme-border group-hover/list:border-theme-muted'}`}>
-                              {isVisible && <Check size={14} className="text-theme-contrast" strokeWidth={3} />}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 text-left">
-                              {editingListId === list.id ? (
-                                <form onSubmit={(e) => handleRenameList(list.id, e)} className="w-full" onClick={e => e.stopPropagation()}>
-                                  <input
-                                    autoFocus
-                                    value={editingListTitle}
-                                    onChange={e => setEditingListTitle(e.target.value)}
-                                    onBlur={(e) => handleRenameList(list.id, e)}
-                                    className="w-full bg-theme-bg border border-theme-bg-accent/30 rounded-xl px-3 py-1 text-sm text-theme-text outline-none"
-                                  />
-                                </form>
-                              ) : (
-                                <div className="flex flex-col">
-                                  <span className={`text-sm truncate ${isVisible ? 'font-black' : 'font-semibold'}`}>
-                                    {list.title}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-bold opacity-50 uppercase tracking-tighter">
-                                      {listTasks.filter(t => t.status === 'completed').length}/{listTasks.length} Done
-                                    </span>
-                                    {overdueCount > 0 && (
-                                      <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-red-400/10 rounded-full border border-red-400/20 scale-75 origin-left">
-                                        <AlertCircle size={8} className="text-red-400" />
-                                        <span className="text-[8px] font-black text-red-400">{overdueCount}</span>
-                                      </div>
-                                    )}
-                                    {listStarredCount > 0 && (
-                                      <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-yellow-400/10 rounded-full border border-yellow-400/20 scale-75 origin-left">
-                                        <Star size={8} className="text-yellow-500 fill-yellow-500" />
-                                        <span className="text-[8px] font-black text-yellow-600">{listStarredCount}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </button>
-
-                          <div className="flex items-center opacity-0 group-hover/list:opacity-100 transition-opacity pr-1 gap-1">
-                            <button 
-                              onClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }}
-                              className="p-1.5 text-theme-muted hover:text-theme-text hover:bg-theme-hover rounded-xl transition-all"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                            <button 
-                              onClick={() => { if(confirm(`Delete "${list.title}"?`)) deleteList(list.id); }}
-                              className="p-1.5 text-theme-muted hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {isCreatingList && (
-                      <motion.form 
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onSubmit={handleCreateList} 
-                        className="px-2 py-2"
-                      >
-                        <div className="flex items-center gap-3 bg-theme-bg border-2 border-theme-bg-accent/50 rounded-2xl px-4 py-3 shadow-2xl">
-                          <input
-                            autoFocus
-                            value={newListTitle}
-                            onChange={e => setNewListTitle(e.target.value)}
-                            className="flex-1 bg-transparent text-sm font-bold text-theme-text outline-none"
-                            placeholder="List name..."
-                          />
-                          <button 
-                            type="button"
-                            onClick={() => setIsCreatingList(false)}
-                            className="p-1 text-theme-muted hover:text-theme-text"
-                          >
-                            <X size={16} />
-                          </button>
-                          <button type="submit" className="w-8 h-8 bg-theme-bg-accent text-theme-contrast rounded-lg flex items-center justify-center">
-                            <Check size={16} strokeWidth={3} />
-                          </button>
-                        </div>
-                      </motion.form>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Sidebar Footer */}
-              <div className="mt-auto pt-8 border-t border-theme-border flex flex-col gap-3">
-                <button 
-                  onClick={() => setIsCreatingList(true)}
-                  className="w-full flex items-center gap-4 px-5 py-4 rounded-[20px] bg-theme-bg-accent text-theme-contrast hover:scale-[1.02] active:scale-[0.98] transition-all font-black shadow-xl shadow-theme-bg-accent/20 group"
-                >
-                  <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
-                    <Plus size={20} strokeWidth={3} />
-                  </div>
-                  <span>Create List</span>
-                </button>
-                <button onClick={logout} className="w-full flex items-center gap-4 px-5 py-4 rounded-[20px] text-red-400 hover:bg-red-400/10 transition-all font-black group">
-                  <div className="w-8 h-8 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                    <LogOut size={20} />
-                  </div>
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
-          </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-
-      {/* ── Main Content ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background Decorative Elements */}
-        <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-theme-bg-accent/5 blur-[120px] rounded-full -z-10" />
-        <div className="absolute bottom-0 left-0 w-1/4 h-1/4 bg-theme-bg-accent/10 blur-[100px] rounded-full -z-10" />
-
-        <header className="flex-shrink-0 flex items-center justify-between px-8 py-5 border-b border-theme-border bg-theme-glass/60 backdrop-blur-md z-10">
-          <div className="flex items-center gap-6 flex-1">
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setSidebarOpen(v => !v)} 
-              className={`p-3 rounded-2xl transition-all shadow-lg ${sidebarOpen ? 'text-theme-bg-accent bg-theme-bg-accent/10 border border-theme-bg-accent/20' : 'text-theme-muted hover:text-theme-text bg-theme-hover/20 border border-transparent'}`}
-            >
-              <Menu size={22} />
-            </motion.button>
-            <div className="hidden lg:block">
-              <h1 className="text-2xl font-black text-theme-text tracking-tight flex items-center gap-3">
-                Task Workspace
-                <span className="px-2 py-0.5 bg-theme-bg-accent/10 text-theme-bg-accent text-[9px] rounded-lg font-black uppercase tracking-widest border border-theme-bg-accent/20">Board</span>
-              </h1>
-              <p className="text-[10px] text-theme-muted font-bold uppercase tracking-widest flex items-center gap-2">
-                {isLoading ? <Loader2 size={10} className="animate-spin text-theme-bg-accent" /> : <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
-                {isLoading ? 'Syncing...' : 'Real-time cloud sync'}
-              </p>
+                <span className="text-[10px] font-black opacity-40">{starredTasks.length}</span>
+              </button>
             </div>
 
-            {/* Premium Search Bar */}
-            <div className="max-w-md w-full ml-4 hidden md:block">
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-theme-muted group-focus-within:text-theme-bg-accent transition-colors">
-                  <Hash size={18} />
+            <p className="text-[10px] font-black text-theme-muted uppercase tracking-widest px-4 mb-3">Lists</p>
+            {displayLists.map(list => (
+              <div key={list.id} className="group flex items-center">
+                <button
+                  onClick={() => toggleListVisibility(list.id)}
+                  className={`flex-1 flex items-center justify-between px-4 py-3 rounded-[18px] transition-all ${visibleListIds.includes(list.id) ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <ListTodo size={18} className={visibleListIds.includes(list.id) ? 'text-theme-bg-accent' : 'text-theme-muted'} />
+                    {editingListId === list.id ? (
+                      <form onSubmit={handleRenameList} className="flex-1">
+                        <input
+                          autoFocus
+                          value={editingListTitle}
+                          onChange={e => setEditingListTitle(e.target.value)}
+                          onBlur={handleRenameList}
+                          className="w-full bg-transparent outline-none border-b border-theme-bg-accent/50 text-sm font-bold"
+                        />
+                      </form>
+                    ) : (
+                      <span className="text-sm font-bold truncate">{list.title}</span>
+                    )}
+                  </div>
+                </button>
+                <div className="opacity-0 group-hover:opacity-100 flex gap-1 pr-2">
+                  <button onClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-muted hover:text-theme-bg-accent transition-all">
+                    <Edit2 size={12} />
+                  </button>
+                  <button onClick={() => { if (confirm('Delete this list?')) deleteList(list.id); }} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-muted hover:text-red-400 transition-all">
+                    <Trash2 size={12} />
+                  </button>
                 </div>
-                <input 
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search tasks, notes, or tags..."
-                  className="w-full bg-theme-hover/20 border border-theme-border/50 rounded-2xl py-2.5 pl-12 pr-4 text-sm text-theme-text outline-none focus:ring-4 focus:ring-theme-bg-accent/10 focus:border-theme-bg-accent/30 transition-all placeholder:text-theme-muted/40"
+              </div>
+            ))}
+
+            {isCreatingList && (
+              <form onSubmit={handleCreateList} className="px-4 py-2">
+                <input
+                  autoFocus
+                  placeholder="New list title..."
+                  value={newListTitle}
+                  onChange={e => setNewListTitle(e.target.value)}
+                  onBlur={() => !newListTitle && setIsCreatingList(false)}
+                  className="w-full bg-theme-bg-accent/5 border border-theme-bg-accent/30 rounded-xl px-4 py-3 text-sm font-bold text-theme-text outline-none focus:ring-1 focus:ring-theme-bg-accent/50"
                 />
-              </div>
+              </form>
+            )}
+          </div>
+
+          <div className="mt-auto pt-6 border-t border-theme-border/20">
+            <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-400 hover:bg-red-400/10 transition-all group">
+              <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+              <span className="text-sm font-bold">Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </motion.aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 bg-theme-bg/10 overflow-hidden relative">
+        {/* Top Navbar */}
+        <header className="flex-shrink-0 h-24 flex items-center justify-between px-10 border-b border-theme-border/20 backdrop-blur-md">
+          <div className="flex items-center gap-6">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-theme-bg-accent/5 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-bg-accent transition-all">
+              <Menu size={20} />
+            </button>
+            <div>
+              <h1 className="text-2xl font-black text-theme-text tracking-tight flex items-center gap-3">
+                Santuario Tasks
+                {isLoading && <Loader2 size={18} className="animate-spin text-theme-bg-accent" />}
+              </h1>
             </div>
           </div>
-          
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-6 px-6 py-2.5 bg-theme-bg/40 rounded-2xl border border-theme-border/50">
-              <div className="flex items-center gap-4">
-                <div className="relative w-10 h-10 flex items-center justify-center">
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-theme-border/20" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-theme-bg-accent transition-all duration-1000" strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - (allTasks.length > 0 ? (allTasks.filter(t => t.status === 'completed').length / allTasks.length) * 100 : 0)} strokeLinecap="round" />
-                  </svg>
-                  <span className="text-[10px] font-black text-theme-text">
-                    {allTasks.length > 0 ? Math.round((allTasks.filter(t => t.status === 'completed').length / allTasks.length) * 100) : 0}%
-                  </span>
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] font-black text-theme-muted uppercase tracking-widest opacity-60">Total Progress</span>
-                  <span className="text-xs font-black text-theme-text">{allTasks.filter(t => t.status === 'completed').length} / {allTasks.length} Done</span>
-                </div>
+
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted group-focus-within:text-theme-bg-accent transition-colors">
+                <LayoutGrid size={18} />
               </div>
-              <div className="w-px h-6 bg-theme-border" />
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-black text-theme-muted uppercase tracking-widest opacity-60">Active Board</span>
-                <span className="text-xs font-black text-theme-text">{columns.length} Columns</span>
-              </div>
+              <input
+                type="text"
+                placeholder="Search everywhere..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="bg-theme-bg-accent/5 border border-theme-border/30 rounded-[22px] py-3 pl-12 pr-6 text-sm font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 w-72 transition-all"
+              />
             </div>
-            
-            <motion.button 
-              whileHover={{ rotate: 180, scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              transition={{ duration: 0.5 }}
-              onClick={() => sync()} 
-              disabled={isLoading}
-              className="p-3 rounded-2xl bg-theme-bg-accent/10 text-theme-bg-accent border border-theme-bg-accent/20 transition-all disabled:opacity-50 shadow-lg shadow-theme-bg-accent/10"
-            >
+            <button onClick={() => sync()} className="p-3 bg-theme-bg-accent/5 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-bg-accent transition-all">
               <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-            </motion.button>
+            </button>
           </div>
         </header>
 
-        {/* Board Display */}
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar">
-            <div className="flex h-full gap-6 p-8" style={{ minWidth: 'max-content' }}>
-              {columns.length === 0 && (
-                <div className="h-full flex items-center justify-center w-full min-w-[800px]">
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center space-y-6 max-w-sm p-12 rounded-[40px] border border-dashed border-theme-border/50 bg-theme-hover/5"
-                  >
-                    <div className="w-24 h-24 bg-gradient-to-br from-theme-hover to-theme-bg-accent/5 rounded-full mx-auto flex items-center justify-center text-theme-muted/40 shadow-inner">
-                      <LayoutGrid size={48} />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-theme-text">Board is Empty</h3>
-                      <p className="text-theme-muted text-sm leading-relaxed px-4">
-                        Toggle list visibility from the sidebar or enable the Starred board to see your tasks here.
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => setSidebarOpen(true)}
-                      className="bg-theme-bg-accent text-theme-contrast px-8 py-3 rounded-2xl font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-theme-bg-accent/20"
-                    >
-                      Configure Workspace
-                    </button>
-                  </motion.div>
-                </div>
-              )}
-              
-              <AnimatePresence mode="popLayout" initial={false}>
-                {columns.map(col => (
-                  <motion.div
-                    key={col.id}
-                    initial={{ opacity: 0, x: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9, x: -20 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="h-full"
-                  >
-                    <ListColumn
-                      listId={col.id}
-                      title={col.title}
-                      tasks={col.tasks as GoogleTask[]}
-                      sensors={sensors}
-                      selectedTaskId={selectedTaskId}
-                      focusedTaskId={focusedTaskId}
-                      setFocusedTaskId={setFocusedTaskId}
-                      onSelect={setSelectedTaskId}
-                      onToggle={handleToggle}
-                      onRemove={handleRemove}
-                      onUpdate={handleUpdate}
-                      onDragEnd={handleDragEnd(col.id)}
-                      onAddTask={async (title, parent, prev) => {
-                        if (showLocal) { addLocalTodo(title); return; }
-                        // Smart columns: add to the first real list
-                        const targetListId = ['__starred__', '__today__'].includes(col.id)
-                          ? lists[0]?.id
-                          : col.id;
-                        if (!targetListId) return;
-                        setActiveList(targetListId);
-                        const t = await addTask(title, parent, prev);
-                        if (t) setFocusedTaskId(t.id);
-                      }}
-                      onMoveTask={moveTask}
-                      onClearCompleted={() => clearCompleted(col.id)}
-                      onRenameList={async (newTitle) => await updateList(col.id, newTitle)}
-                      onDeleteList={async () => await deleteList(col.id)}
-                    />
-                  </motion.div>
-                ))}
-
-                {/* Add List Column Card */}
-                {!showLocal && isAuthenticated && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="h-full flex-shrink-0"
-                  >
-                    <div className="w-[360px] h-full flex flex-col items-center justify-center">
-                      {isCreatingList ? (
-                        <motion.form 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          onSubmit={handleCreateList}
-                          className="w-full p-8 bg-theme-bg-accent/5 border-2 border-theme-bg-accent/30 rounded-[40px] space-y-6 shadow-2xl shadow-theme-bg-accent/10"
-                        >
-                          <div className="w-16 h-16 bg-theme-bg-accent rounded-3xl flex items-center justify-center shadow-lg mx-auto">
-                            <Plus size={32} className="text-theme-contrast" />
-                          </div>
-                          <div className="space-y-4">
-                            <h3 className="text-center font-black text-theme-text uppercase tracking-widest text-xs">New List Name</h3>
-                            <input
-                              autoFocus
-                              value={newListTitle}
-                              onChange={e => setNewListTitle(e.target.value)}
-                              className="w-full bg-theme-bg border-2 border-theme-border rounded-2xl px-6 py-4 text-theme-text font-bold text-center outline-none focus:border-theme-bg-accent transition-all"
-                              placeholder="Type name here..."
-                            />
-                            <div className="flex gap-3">
-                              <button 
-                                type="button" 
-                                onClick={() => setIsCreatingList(false)}
-                                className="flex-1 py-3 rounded-xl bg-theme-hover text-theme-muted font-bold text-xs"
-                              >
-                                Cancel
-                              </button>
-                              <button 
-                                type="submit"
-                                className="flex-1 py-3 rounded-xl bg-theme-bg-accent text-theme-contrast font-bold text-xs shadow-lg shadow-theme-bg-accent/20"
-                              >
-                                Create List
-                              </button>
-                            </div>
-                          </div>
-                        </motion.form>
-                      ) : (
-                        <button
-                          onClick={() => setIsCreatingList(true)}
-                          className="w-full h-[200px] bg-theme-hover/10 border-2 border-dashed border-theme-border/50 rounded-[40px] flex flex-col items-center justify-center gap-4 text-theme-muted hover:text-theme-bg-accent hover:border-theme-bg-accent/50 hover:bg-theme-bg-accent/5 transition-all group"
-                        >
-                          <div className="w-16 h-16 bg-theme-bg rounded-3xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                            <Plus size={32} />
-                          </div>
-                          <span className="font-black text-sm uppercase tracking-[0.2em]">Add New List</span>
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
+        {/* Dynamic Column Flow */}
+        <div className="flex-1 overflow-x-auto custom-scrollbar flex p-8 gap-8 items-start">
+          <AnimatePresence mode="popLayout">
+            {showTodayColumn && (
+              <TaskColumn
+                key="column-today"
+                listId="__today"
+                title="My Day"
+                tasks={todayTasks}
+                sensors={sensors}
+                selectedTaskId={selectedTaskId}
+                focusedTaskId={focusedTaskId}
+                setFocusedTaskId={setFocusedTaskId}
+                onSelect={setSelectedTaskId}
+                onToggle={toggleTask}
+                onRemove={removeTask}
+                onUpdate={updateTaskDetail}
+                onDragEnd={handleDragEnd}
+                onAddTask={(text) => addTask(text, displayLists[0]?.id)}
+                onMoveTask={moveTask}
+                onClearCompleted={() => {}}
+                onRenameList={async () => {}}
+                onDeleteList={() => setShowTodayColumn(false)}
+              />
+            )}
+            {showStarredColumn && (
+              <TaskColumn
+                key="column-starred"
+                listId="__starred"
+                title="Starred"
+                tasks={starredTasks}
+                sensors={sensors}
+                selectedTaskId={selectedTaskId}
+                focusedTaskId={focusedTaskId}
+                setFocusedTaskId={setFocusedTaskId}
+                onSelect={setSelectedTaskId}
+                onToggle={toggleTask}
+                onRemove={removeTask}
+                onUpdate={updateTaskDetail}
+                onDragEnd={handleDragEnd}
+                onAddTask={(text) => addTask(text, displayLists[0]?.id)}
+                onMoveTask={moveTask}
+                onClearCompleted={() => {}}
+                onRenameList={async () => {}}
+                onDeleteList={() => setShowStarredColumn(false)}
+              />
+            )}
+            {(showLocal ? ['local'] : visibleListIds).map(listId => {
+              const list = displayLists.find(l => l.id === listId);
+              if (!list) return null;
+              return (
+                <TaskColumn
+                  key={`column-${listId}`}
+                  listId={listId}
+                  title={list.title}
+                  tasks={displayTasksByList[listId] || []}
+                  sensors={sensors}
+                  selectedTaskId={selectedTaskId}
+                  focusedTaskId={focusedTaskId}
+                  setFocusedTaskId={setFocusedTaskId}
+                  onSelect={setSelectedTaskId}
+                  onToggle={toggleTask}
+                  onRemove={removeTask}
+                  onUpdate={updateTaskDetail}
+                  onDragEnd={handleDragEnd}
+                  onAddTask={(text) => addTask(text, listId)}
+                  onClearCompleted={() => clearCompleted(listId)}
+                  onRenameList={(t) => updateList(listId, t)}
+                  onDeleteList={(id) => deleteList(id)}
+                  onMoveTask={moveTask}
+                />
+              );
+            })}
+          </AnimatePresence>
 
           {/* Details Pane */}
           <AnimatePresence>
@@ -727,156 +397,99 @@ export const TasksView: React.FC = () => {
                     </div>
                     <span className="text-xs font-black text-theme-muted uppercase tracking-[0.2em]">Edit Task</span>
                   </div>
-                  <button 
-                    onClick={() => setSelectedTaskId(null)} 
-                    className="p-2 rounded-xl text-theme-muted hover:text-theme-text hover:bg-theme-hover transition-all"
-                  >
+                  <button onClick={() => setSelectedTaskId(null)} className="p-2 hover:bg-theme-bg-accent/10 rounded-xl text-theme-muted transition-all">
                     <X size={20} />
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Hash size={12} className="text-theme-bg-accent" /> Title
-                  </label>
-                  <textarea
-                    className="w-full bg-theme-hover border border-theme-border rounded-2xl p-5 text-theme-text font-bold text-lg resize-none outline-none focus:ring-4 focus:ring-theme-bg-accent/10 focus:border-theme-bg-accent/50 transition-all shadow-inner"
-                    rows={2}
-                    value={selectedTask.title}
-                    onChange={e => handleUpdate(selectedTask.id, { title: e.target.value })}
-                    placeholder="What needs to be done?"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
-                    <StickyNote size={12} className="text-theme-bg-accent" /> Description
-                  </label>
-                  <textarea
-                    className="w-full bg-theme-hover border border-theme-border rounded-2xl p-5 text-theme-text text-sm resize-none outline-none focus:ring-4 focus:ring-theme-bg-accent/10 focus:border-theme-bg-accent/50 transition-all min-h-[120px] leading-relaxed shadow-inner"
-                    placeholder="Add more details or notes here..."
-                    value={selectedTask.notes || ''}
-                    onChange={e => handleUpdate(selectedTask.id, { notes: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
-                      <Calendar size={12} className="text-theme-bg-accent" /> Due Date
-                    </label>
-                    {(() => {
-                      const isOverdue = selectedTask.due && selectedTask.due.split('T')[0] < new Date().toISOString().split('T')[0] && selectedTask.status !== 'completed';
-                      return (
-                        <div className="relative">
-                          <input
-                            type="date"
-                            className={`w-full rounded-2xl p-4 text-sm font-bold outline-none focus:ring-4 transition-all border ${
-                              isOverdue
-                                ? 'bg-red-400/10 border-red-400/40 text-red-400 focus:ring-red-400/20'
-                                : 'bg-theme-hover border-theme-border/50 text-theme-text focus:ring-theme-bg-accent/10 focus:border-theme-bg-accent/50 shadow-inner'
-                            }`}
-                            style={{ colorScheme: 'dark' }}
-                            value={selectedTask.due ? selectedTask.due.split('T')[0] : ''}
-                            onChange={e => handleUpdate(selectedTask.id, { due: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                          />
-                          {isOverdue && (
-                            <div className="mt-1 flex items-center gap-1 text-red-400">
-                              <AlertCircle size={10} />
-                              <span className="text-[9px] font-black">OVERDUE</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
-                      <Star size={12} className="text-theme-bg-accent" /> Priority
-                    </label>
-                    <button
-                      onClick={() => toggleStarred(selectedTask.id)}
-                      className={`w-full h-[54px] rounded-2xl flex items-center justify-center gap-2 font-bold text-xs transition-all border ${selectedTask.starred ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-500' : 'bg-theme-hover/50 border-transparent text-theme-muted hover:text-theme-text'}`}
-                    >
-                      <Star size={14} fill={selectedTask.starred ? 'currentColor' : 'none'} />
-                      {selectedTask.starred ? 'Starred' : 'Not Starred'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Move to List */}
-                {lists.length > 1 && selectedTaskListId && (
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
-                      <ArrowRightLeft size={12} className="text-theme-bg-accent" /> Move to List
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedTaskListId}
-                        onChange={e => {
-                          moveTaskToList(selectedTask.id, e.target.value);
-                          setSelectedTaskId(null);
-                        }}
-                        className="w-full bg-theme-hover border border-theme-border/50 rounded-2xl px-5 py-4 text-theme-text text-sm font-bold outline-none focus:ring-4 focus:ring-theme-bg-accent/10 focus:border-theme-bg-accent/50 transition-all cursor-pointer appearance-none shadow-inner"
-                      >
-                        {lists.map(l => (
-                          <option key={l.id} value={l.id} style={{ background: '#1e293b', color: '#ffffff' }}>
-                            {l.id === selectedTaskListId ? `✓ ${l.title}` : l.title}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-theme-muted">
-                        <ChevronDown size={16} />
-                      </div>
+                <div className="space-y-8">
+                  {/* Title & Notes Area */}
+                  <div className="space-y-6 bg-theme-bg-accent/5 p-6 rounded-3xl border border-theme-border/20">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-theme-muted uppercase tracking-widest ml-1">Title</label>
+                      <textarea
+                        value={selectedTask.title}
+                        onChange={e => updateTaskDetail(selectedTask.id, { title: e.target.value })}
+                        className="w-full bg-transparent text-xl font-bold text-theme-text outline-none resize-none placeholder-theme-muted/30"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2 border-t border-theme-border/20 pt-6">
+                      <label className="text-[10px] font-black text-theme-muted uppercase tracking-widest ml-1">Description</label>
+                      <textarea
+                        value={selectedTask.notes || ''}
+                        onChange={e => updateTaskDetail(selectedTask.id, { notes: e.target.value })}
+                        placeholder="Add some details..."
+                        className="w-full bg-transparent text-[14px] font-medium leading-relaxed text-theme-text/80 outline-none resize-none min-h-[120px] placeholder-theme-muted/30"
+                      />
                     </div>
                   </div>
-                )}
 
-                <div className="mt-auto pt-6 border-t border-theme-border flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-theme-muted uppercase tracking-widest">Last Modified</span>
-                    <span className="text-xs text-theme-text font-bold">
-                      {new Date(selectedTask.updated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
+                  {/* Metadata Grid */}
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="group relative">
+                      <label className="absolute left-4 top-2.5 text-[9px] font-black text-theme-muted uppercase tracking-widest transition-all group-focus-within:text-theme-bg-accent">Due Date</label>
+                      <input
+                        type="date"
+                        value={selectedTask.due ? selectedTask.due.split('T')[0] : ''}
+                        onChange={e => updateTaskDetail(selectedTask.id, { due: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                        className="w-full bg-theme-bg-accent/5 border border-theme-border/20 rounded-2xl pt-7 pb-3.5 px-4 text-[13px] font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 transition-all"
+                      />
+                    </div>
+
+                    <div className="group relative">
+                      <label className="absolute left-4 top-2.5 text-[9px] font-black text-theme-muted uppercase tracking-widest transition-all">Move to List</label>
+                      <select
+                        value={selectedTaskListId || ''}
+                        onChange={e => {
+                          const targetListId = e.target.value;
+                          if (targetListId && targetListId !== selectedTaskListId) {
+                            moveTaskToList(selectedTask.id, targetListId);
+                          }
+                        }}
+                        className="w-full bg-theme-bg-accent/5 border border-theme-border/20 rounded-2xl pt-7 pb-3.5 px-4 text-[13px] font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 transition-all appearance-none cursor-pointer"
+                      >
+                        {lists.map(l => (
+                          <option key={l.id} value={l.id} className="bg-slate-900 text-white font-bold">{l.title}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-4 top-1/2 translate-y-1 text-theme-muted pointer-events-none" />
+                    </div>
                   </div>
-                  <button
-                    onClick={() => { if(confirm('Permanently delete this task?')) { handleRemove(selectedTask.id); setSelectedTaskId(null); } }}
-                    className="flex items-center gap-2 bg-red-400/10 text-red-400 hover:bg-red-400 hover:text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                </div>
+
+                <div className="mt-auto pt-8 border-t border-theme-border/20 flex justify-between items-center">
+                  <button onClick={() => { if (confirm('Delete this task?')) { removeTask(selectedTask.id); setSelectedTaskId(null); } }} className="flex items-center gap-2 text-red-400 hover:text-red-500 font-black text-[10px] uppercase tracking-widest transition-all">
+                    <Trash2 size={14} /> Delete Task
+                  </button>
+                  <button 
+                    onClick={() => updateTaskDetail(selectedTask.id, { starred: !selectedTask.starred })}
+                    className={`p-3 rounded-2xl transition-all ${selectedTask.starred ? 'bg-amber-400/20 text-amber-500' : 'bg-theme-bg-accent/5 text-theme-muted hover:text-theme-bg-accent'}`}
                   >
-                    <Trash2 size={14} /> Delete
+                    <Star size={20} fill={selectedTask.starred ? 'currentColor' : 'none'} />
                   </button>
                 </div>
               </motion.aside>
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-// ─── List Column ─────────────────────────────────────────────────────────────
-interface ListColumnProps {
-  listId: string;
-  title: string;
-  tasks: GoogleTask[];
-  sensors: any;
-  selectedTaskId: string | null;
-  focusedTaskId: string | null;
+// ─── Column Component ────────────────────────────────────────────────────────
+const TaskColumn: React.FC<{
+  listId: string; title: string; tasks: GoogleTask[];
+  sensors: any; selectedTaskId: string | null; focusedTaskId: string | null;
   setFocusedTaskId: (id: string | null) => void;
-  onSelect: (id: string) => void;
-  onToggle: (id: string) => void;
-  onRemove: (id: string) => void;
-  onUpdate: (id: string, u: Partial<GoogleTask>) => void;
-  onDragEnd: (event: DragEndEvent) => void;
-  onAddTask: (title: string, parent?: string, prev?: string) => void;
-  onMoveTask: (id: string, parentId?: string, prevId?: string) => void;
-  onClearCompleted: () => void;
-  onRenameList: (newTitle: string) => Promise<void>;
-  onDeleteList: () => Promise<void>;
-}
-
-const ListColumn: React.FC<ListColumnProps> = ({
+  onSelect: (id: string) => void; onToggle: (id: string) => void;
+  onRemove: (id: string) => void; onUpdate: (id: string, u: Partial<GoogleTask>) => void;
+  onDragEnd: (e: DragEndEvent, listId: string) => void;
+  onAddTask: (text: string, parent?: string, previous?: string) => void; onMoveTask: (id: string, parent?: string, prev?: string) => void;
+  onClearCompleted: () => void; onRenameList: (t: string) => Promise<void>;
+  onDeleteList: (id: string) => void;
+}> = ({
   listId, title, tasks, sensors,
   selectedTaskId, focusedTaskId, setFocusedTaskId,
   onSelect, onToggle, onRemove, onUpdate, onDragEnd, onAddTask, onMoveTask,
@@ -886,12 +499,12 @@ const ListColumn: React.FC<ListColumnProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
   const [showMenu, setShowMenu] = useState(false);
+  const [sortBy, setSortBy] = useState<'manual' | 'deadline' | 'title'>('manual');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const visibleTasks = tasks.filter(t => t.status !== 'completed');
   const completedTasks = tasks.filter(t => t.status === 'completed');
   const [showCompleted, setShowCompleted] = useState(false);
-  const [sortBy, setSortBy] = useState<'manual' | 'deadline' | 'title'>('manual');
 
   const sortedVisibleTasks = useMemo(() => {
     let result = [...visibleTasks];
@@ -948,17 +561,7 @@ const ListColumn: React.FC<ListColumnProps> = ({
               />
             </form>
           ) : (
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black text-theme-text truncate tracking-tight">{title}</h2>
-              {!isSpecial && (
-                <button 
-                  onClick={() => setIsEditingTitle(true)}
-                  className="opacity-0 group-hover/column:opacity-100 p-1 text-theme-muted hover:text-theme-text transition-all"
-                >
-                  <Edit2 size={12} />
-                </button>
-              )}
-            </div>
+            <h3 className="text-xl font-black text-theme-text truncate tracking-tight">{title}</h3>
           )}
         </div>
         <div className="flex items-center gap-3 relative" ref={menuRef}>
@@ -1024,7 +627,7 @@ const ListColumn: React.FC<ListColumnProps> = ({
                       <CheckCheck size={14} className="opacity-50 group-hover:opacity-100" /> Clear {completedTasks.length} Completed
                     </button>
                   )}
-                  <button onClick={() => { if(confirm('Delete this list?')) { onDeleteList(); setShowMenu(false); } }} className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-red-400/80 hover:bg-red-400/10 hover:text-red-400 rounded-xl transition-all group">
+                  <button onClick={() => { if(confirm('Delete this list?')) { onDeleteList(listId); setShowMenu(false); } }} className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-red-400/80 hover:bg-red-400/10 hover:text-red-400 rounded-xl transition-all group">
                     <Trash2 size={14} className="opacity-50 group-hover:opacity-100" /> Delete List
                   </button>
                 </div>
@@ -1053,7 +656,7 @@ const ListColumn: React.FC<ListColumnProps> = ({
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-6 space-y-2">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => onDragEnd(e, listId)}>
           <SortableContext items={visibleTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
             <AnimatePresence mode="popLayout" initial={false}>
               {tree.length === 0 ? (
@@ -1067,16 +670,7 @@ const ListColumn: React.FC<ListColumnProps> = ({
                 </motion.div>
               ) : (
                 tree.map(task => {
-                  // Recursive function to render task and its subtasks with correct keyboard navigation
                   const renderTask = (node: TaskNode, depth: number) => {
-                    const flattenedVisualList = tasks; // All tasks in flat order for focus navigation
-                    
-                    const handleArrow = (id: string, direction: 'up' | 'down') => {
-                      const idx = flattenedVisualList.findIndex(t => t.id === id);
-                      if (direction === 'up' && idx > 0) setFocusedTaskId(flattenedVisualList[idx - 1].id);
-                      if (direction === 'down' && idx < flattenedVisualList.length - 1) setFocusedTaskId(flattenedVisualList[idx + 1].id);
-                    };
-
                     return (
                       <React.Fragment key={node.id}>
                         <TaskItem
@@ -1106,14 +700,12 @@ const ListColumn: React.FC<ListColumnProps> = ({
                           }}
                           onBackspace={(id, title) => {
                             if (title === '') {
-                              const idx = tasks.findIndex(x => x.id === id);
-                              const next = idx > 0 ? tasks[idx - 1].id : tasks.length > 1 ? tasks[1].id : null;
                               onRemove(id);
-                              if (next) setFocusedTaskId(next);
+                              setFocusedTaskId(null);
                             }
                           }}
-                          onArrowUp={id => handleArrow(id, 'up')}
-                          onArrowDown={id => handleArrow(id, 'down')}
+                          onArrowUp={() => {}}
+                          onArrowDown={() => {}}
                         />
                         {node.children && node.children.length > 0 && (
                           <div className="space-y-1">
@@ -1165,14 +757,8 @@ const ListColumn: React.FC<ListColumnProps> = ({
                       onUpdateTask={onUpdate}
                       onEnter={() => {}}
                       onBackspace={() => {}}
-                      onArrowUp={(id) => {
-                        const idx = completedTasks.findIndex(x => x.id === id);
-                        if (idx > 0) setFocusedTaskId(completedTasks[idx - 1].id);
-                      }}
-                      onArrowDown={(id) => {
-                        const idx = completedTasks.findIndex(x => x.id === id);
-                        if (idx < completedTasks.length - 1) setFocusedTaskId(completedTasks[idx + 1].id);
-                      }}
+                      onArrowUp={() => {}}
+                      onArrowDown={() => {}}
                     />
                   ))}
                 </motion.div>
@@ -1206,13 +792,11 @@ const TaskItem: React.FC<{
   useEffect(() => {
     if (isFocused && inputRef.current) {
       inputRef.current.focus();
-      // Move cursor to end
       const len = inputRef.current.value.length;
       inputRef.current.setSelectionRange(len, len);
     }
   }, [isFocused]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
@@ -1231,26 +815,11 @@ const TaskItem: React.FC<{
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { 
-      e.preventDefault(); 
-      onEnter(task.id); 
-    }
-    else if (e.key === 'Tab') { 
-      e.preventDefault(); 
-      e.shiftKey ? onOutdent(task.id) : onIndent(task.id); 
-    }
-    else if (e.key === 'Backspace' && task.title === '') {
-      e.preventDefault();
-      onBackspace(task.id, task.title);
-    }
-    else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      onArrowUp(task.id);
-    }
-    else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      onArrowDown(task.id);
-    }
+    if (e.key === 'Enter') { e.preventDefault(); onEnter(task.id); }
+    else if (e.key === 'Tab') { e.preventDefault(); e.shiftKey ? onOutdent(task.id) : onIndent(task.id); }
+    else if (e.key === 'Backspace' && task.title === '') { e.preventDefault(); onBackspace(task.id, task.title); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); onArrowUp(task.id); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); onArrowDown(task.id); }
   };
 
   const isCompleted = task.status === 'completed';
@@ -1258,12 +827,8 @@ const TaskItem: React.FC<{
 
   return (
     <div ref={setNodeRef} style={style} className="group/item outline-none relative">
-      {/* Hierarchy Line */}
       {depth > 0 && (
-        <div 
-          className="absolute left-[-12px] top-0 bottom-0 w-px bg-theme-border/30" 
-          style={{ left: `-${12}px` }}
-        />
+        <div className="absolute left-[-12px] top-0 bottom-0 w-px bg-theme-border/30" style={{ left: `-${12}px` }} />
       )}
 
       <motion.div
@@ -1277,26 +842,16 @@ const TaskItem: React.FC<{
         } ${isDragging ? 'opacity-50 shadow-2xl scale-[1.02] z-50 ring-1 ring-theme-bg-accent' : ''}`}
         onClick={() => { setFocusedTaskId(task.id); onSelect(task.id); }}
       >
-        {/* Drag Handle */}
-        <div 
-          {...attributes} {...listeners} 
-          className="mt-1.5 cursor-grab active:cursor-grabbing text-theme-muted opacity-0 group-hover/item:opacity-100 transition-all flex-shrink-0"
-        >
+        <div {...attributes} {...listeners} className="mt-1.5 cursor-grab active:cursor-grabbing text-theme-muted opacity-0 group-hover/item:opacity-100 transition-all flex-shrink-0">
           <Menu size={12} className="rotate-90" />
         </div>
 
-        {/* Checkbox — animated completion */}
         <motion.button
           onClick={e => { e.stopPropagation(); onToggle(task.id); }}
           whileTap={{ scale: 0.8 }}
           animate={isCompleted ? { scale: [1, 1.3, 1] } : { scale: 1 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
           className={`mt-1 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${
-            isCompleted
-              ? 'bg-green-500 border-green-500 text-white'
-              : isOverdue
-              ? 'border-red-400 group-hover/item:border-red-400'
-              : 'border-theme-muted group-hover/item:border-theme-bg-accent'
+            isCompleted ? 'bg-green-500 border-green-500 text-white' : isOverdue ? 'border-red-400' : 'border-theme-muted group-hover/item:border-theme-bg-accent'
           }`}
         >
           {isCompleted ? (
@@ -1304,9 +859,7 @@ const TaskItem: React.FC<{
               <Check size={12} strokeWidth={4} />
             </motion.div>
           ) : (
-            <div className={`w-2 h-2 rounded-full opacity-0 group-hover/item:opacity-40 transition-opacity ${
-              isOverdue ? 'bg-red-400' : 'bg-theme-bg-accent'
-            }`} />
+            <div className={`w-2 h-2 rounded-full opacity-0 group-hover/item:opacity-40 transition-opacity ${isOverdue ? 'bg-red-400' : 'bg-theme-bg-accent'}`} />
           )}
         </motion.button>
 
@@ -1344,7 +897,6 @@ const TaskItem: React.FC<{
           )}
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
           <button
             onClick={e => { e.stopPropagation(); onUpdateTask(task.id, { starred: !task.starred }); }}
@@ -1354,45 +906,16 @@ const TaskItem: React.FC<{
           </button>
           
           {hasChildren && (
-            <button 
-              onClick={e => { e.stopPropagation(); setExpanded(v => !v); }} 
-              className={`p-1.5 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-hover transition-all ${expanded ? 'rotate-0' : '-rotate-90'}`}
-            >
+            <button onClick={e => { e.stopPropagation(); setExpanded(v => !v); }} className={`p-1.5 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-hover transition-all ${expanded ? 'rotate-0' : '-rotate-90'}`}>
               <ChevronDown size={14} />
             </button>
           )}
 
-          <button 
-            onClick={e => { e.stopPropagation(); if(confirm('Delete task?')) onRemove(task.id); }}
-            className="p-1.5 rounded-lg text-theme-muted opacity-0 group-hover/item:opacity-100 hover:text-red-400 hover:bg-red-400/10 transition-all"
-          >
+          <button onClick={e => { e.stopPropagation(); if(confirm('Delete task?')) onRemove(task.id); }} className="p-1.5 rounded-lg text-theme-muted opacity-0 group-hover/item:opacity-100 hover:text-red-400 hover:bg-red-400/10 transition-all">
             <Trash2 size={14} />
           </button>
         </div>
       </motion.div>
-
-      {/* Subtasks */}
-      <AnimatePresence>
-        {hasChildren && expanded && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="space-y-1 mt-1 overflow-hidden"
-          >
-            <SortableContext items={task.children.map(c => c.id)} strategy={verticalListSortingStrategy}>
-              {task.children.map(child => (
-                <TaskItem key={child.id} task={child} depth={depth + 1}
-                  isSelected={isSelected} focusedTaskId={focusedTaskId} setFocusedTaskId={setFocusedTaskId}
-                  onToggle={onToggle} onRemove={onRemove} onSelect={onSelect}
-                  onIndent={onIndent} onOutdent={onOutdent} onUpdateTask={onUpdateTask}
-                  onEnter={onEnter} onBackspace={onBackspace} onArrowUp={onArrowUp} onArrowDown={onArrowDown}
-                />
-              ))}
-            </SortableContext>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

@@ -83,17 +83,32 @@ export class GoogleCalendarService {
   static async listEvents(
     calendarId: string = 'primary', 
     timeMin: string = new Date().toISOString(),
-    timeMax?: string
+    timeMax?: string,
+    maxResults: number = 250
   ): Promise<CalendarEvent[]> {
-    let url = `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${encodeURIComponent(timeMin)}&singleEvents=true&orderBy=startTime`;
-    if (timeMax) {
-      url += `&timeMax=${encodeURIComponent(timeMax)}`;
-    }
+    let allEvents: CalendarEvent[] = [];
+    let pageToken: string | undefined;
 
-    const response = await this.fetchWithAuth(url);
-    if (!response.ok) throw new Error('Failed to fetch events');
-    const data = await response.json();
-    return data.items || [];
+    do {
+      const url = new URL(`${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events`);
+      url.searchParams.append('timeMin', timeMin);
+      url.searchParams.append('singleEvents', 'true');
+      url.searchParams.append('orderBy', 'startTime');
+      url.searchParams.append('maxResults', maxResults.toString());
+      if (timeMax) url.searchParams.append('timeMax', timeMax);
+      if (pageToken) url.searchParams.append('pageToken', pageToken);
+
+      const response = await this.fetchWithAuth(url.toString());
+      if (!response.ok) throw new Error('Failed to fetch events');
+      
+      const data = await response.json();
+      if (data.items) {
+        allEvents = [...allEvents, ...data.items];
+      }
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+
+    return allEvents;
   }
 
   /**

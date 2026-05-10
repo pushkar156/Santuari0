@@ -13,6 +13,7 @@ export const useSpotify = (autoPoll = false) => {
     setSpotifyRefreshToken 
   } = useWidgetStore();
   const pollTimer = useRef<number | null>(null);
+  const failCount = useRef<number>(0);
 
   const fetchTrack = async () => {
     if (!spotifyToken) return;
@@ -27,22 +28,39 @@ export const useSpotify = (autoPoll = false) => {
       }
       
       updateSpotifyTrack(track);
+      failCount.current = 0; // Reset on success
     } catch (error: any) {
       console.error('Spotify poll error:', error);
-      if (error?.status === 401 && spotifyRefreshToken && spotifyClientId) {
+      
+      // Check for 401 status (token expired)
+      const is401 = error?.status === 401 || error?.message?.includes('401') || error?.message?.includes('expired');
+      
+      if (is401 && spotifyRefreshToken && spotifyClientId) {
         try {
           const tokens = await SpotifyService.refreshAccessToken(spotifyClientId, spotifyRefreshToken);
           setSpotifyToken(tokens.accessToken);
           if (tokens.refreshToken) {
             setSpotifyRefreshToken(tokens.refreshToken);
           }
+          failCount.current = 0;
           // Retry fetch with new token
           const track = await SpotifyService.getCurrentlyPlaying(tokens.accessToken);
           updateSpotifyTrack(track);
         } catch (refreshError) {
           console.error('Failed to refresh Spotify token:', refreshError);
-          // If refresh fails, then we might need to clear it, but user wanted it to stay
-          // Maybe just leave it and let user re-connect manually if refresh fails
+          failCount.current++;
+        }
+      } else if (is401) {
+        failCount.current++;
+      }
+      
+      // After 3 consecutive failures, stop polling and clear token
+      if (failCount.current >= 3) {
+        console.warn('Spotify: Too many auth failures, clearing token. Please reconnect.');
+        setSpotifyToken(null);
+        if (pollTimer.current) {
+          window.clearInterval(pollTimer.current);
+          pollTimer.current = null;
         }
       }
     }

@@ -50,6 +50,7 @@ interface TasksState {
   setShowTodayColumn: (show: boolean) => void;
   setShowStarredColumn: (show: boolean) => void;
   sync: (interactive?: boolean) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<GoogleTask>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -100,7 +101,11 @@ export const useTasksStore = create<TasksState>()(
       },
 
       fetchTasks: async (listId) => {
-        set({ isLoading: true, error: null });
+        // Only set isLoading if it's the active list to avoid UI flicker
+        if (get().activeListId === listId) {
+          set({ isLoading: true, error: null });
+        }
+        
         try {
           const tasks = await GoogleTasksService.listTasks(listId);
           const { starredTaskIds } = get();
@@ -113,7 +118,9 @@ export const useTasksStore = create<TasksState>()(
         } catch (err) {
           set({ error: (err as Error).message });
         } finally {
-          set({ isLoading: false });
+          if (get().activeListId === listId) {
+            set({ isLoading: false });
+          }
         }
       },
 
@@ -160,7 +167,41 @@ export const useTasksStore = create<TasksState>()(
         }
       },
 
-      // FIXED: looks up the task's actual list instead of using activeListId
+      updateTask: async (taskId, updates) => {
+        const { tasksByList } = get();
+        const listId = findTaskListId(taskId, tasksByList);
+        if (!listId) return;
+
+        const tasks = tasksByList[listId] || [];
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        // Optimistic update
+        set((state) => ({
+          tasksByList: {
+            ...state.tasksByList,
+            [listId]: state.tasksByList[listId].map((t) =>
+              t.id === taskId ? { ...t, ...updates } : t
+            ),
+          },
+        }));
+
+        try {
+          await GoogleTasksService.updateTask(listId, taskId, updates);
+        } catch (err) {
+          // Revert on error
+          set((state) => ({
+            tasksByList: {
+              ...state.tasksByList,
+              [listId]: state.tasksByList[listId].map((t) =>
+                t.id === taskId ? task : t
+              ),
+            },
+            error: (err as Error).message,
+          }));
+        }
+      },
+
       toggleTask: async (taskId) => {
         const { tasksByList } = get();
         const listId = findTaskListId(taskId, tasksByList);
