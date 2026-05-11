@@ -75,10 +75,10 @@ export const QuickLinks: React.FC = () => {
           onClick={() => setIsAdding(true)}
           className="flex flex-col items-center justify-center w-28 h-28 bg-white/5 backdrop-blur-sm rounded-3xl border-2 border-theme-border/20 border-dashed hover:bg-white/10 hover:border-theme-border/50 hover:border-solid transition-all duration-500 group flex-shrink-0"
         >
-          <div className="p-3 bg-theme-glass rounded-2xl mb-2 group-hover:scale-110 group-hover:rotate-90 transition-all duration-500">
-            <Plus size={20} className="text-theme-muted group-hover:text-theme-text" />
+          <div className="p-3 bg-theme-bg-accent/10 rounded-2xl mb-2 group-hover:scale-110 group-hover:rotate-90 transition-all duration-500">
+            <Plus size={20} className="text-theme-bg-accent" />
           </div>
-          <span className="text-theme-muted text-[9px] font-bold uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">Add Link</span>
+          <span className="text-theme-bg-accent text-[9px] font-bold uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">Add Link</span>
         </button>
       </div>
 

@@ -38,14 +38,14 @@ export const NavigationRail: React.FC = () => {
       <div className="flex flex-col items-center gap-2 pb-2">
         <button
           onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}
-          className="target-element p-3 rounded-full text-theme-muted hover:text-theme-text hover:bg-theme-hover transition-colors duration-300 relative group"
+          className="p-3 rounded-full text-theme-muted hover:text-theme-text hover:bg-theme-hover transition-colors duration-300 relative group"
           title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
         >
           {mode === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </button>
         <button
           onClick={() => setActiveView('background')}
-          className={`target-element p-3 rounded-full transition-colors duration-300 relative group ${
+          className={`p-3 rounded-full transition-colors duration-300 relative group ${
             activeView === 'background' ? 'text-theme-text bg-theme-hover' : 'text-theme-muted hover:text-theme-text hover:bg-theme-hover'
           }`}
           title="Background Settings"
@@ -54,7 +54,7 @@ export const NavigationRail: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveView('settings')}
-          className={`target-element p-3 rounded-full transition-colors duration-300 relative group ${
+          className={`p-3 rounded-full transition-colors duration-300 relative group ${
             activeView === 'settings' ? 'text-theme-text bg-theme-hover' : 'text-theme-muted hover:text-theme-text hover:bg-theme-hover'
           }`}
           title="Settings"

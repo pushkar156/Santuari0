@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Clock } from '../widgets/Clock/Clock';
 import { SearchBar } from '../widgets/SearchBar';
-import { QuickLinks } from '../widgets/QuickLinks';
 import { Weather } from '../widgets/Weather';
 import { Settings } from './Settings';
 import { BackgroundSettings } from './BackgroundSettings';
@@ -65,16 +64,13 @@ export const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Main Content Column (Clock, Search, Links) */}
+              {/* Main Content Column (Clock, Search) */}
               <div className="col-span-12 md:col-span-8 md:col-start-5 flex flex-col items-center space-y-10 py-4">
                 <div className="flex flex-col items-center w-full">
                   <Clock />
                 </div>
                 <div className="w-full max-w-2xl">
                   <SearchBar />
-                </div>
-                <div className="w-full max-w-4xl px-4">
-                  <QuickLinks />
                 </div>
               </div>
             </div>

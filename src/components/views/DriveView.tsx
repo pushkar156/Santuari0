@@ -33,6 +33,8 @@ export const DriveView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterType, setFilterType] = useState<'all' | 'image' | 'video'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'size'>('date');
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<DriveFile | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
 
@@ -40,10 +42,24 @@ export const DriveView: React.FC = () => {
     init();
   }, [init]);
 
+  const previewsRef = React.useRef<Record<string, string>>({});
+
+  // Clean up Object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(previewsRef.current).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  // Update ref when previews change
+  useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
   // Handle folder picking
   const handleConnectFolder = async () => {
     try {
-      const handle = await window.showDirectoryPicker();
+      const handle = await (window as any).showDirectoryPicker();
       setRootHandle(handle);
     } catch (err) {
       console.error('User cancelled folder picker', err);
@@ -61,7 +77,6 @@ export const DriveView: React.FC = () => {
           try {
             if (file.handle.kind === 'file') {
               const fileData = await (file.handle as FileSystemFileHandle).getFile();
-              // Only create object URLs for images for now to avoid memory pressure
               if (fileData.type.startsWith('image/')) {
                 newPreviews[file.id] = URL.createObjectURL(fileData);
                 changed = true;
@@ -84,14 +99,43 @@ export const DriveView: React.FC = () => {
   }, [files]);
 
   const filteredFiles = useMemo(() => {
-    return files.filter(file => {
+    let result = files.filter(file => {
       const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesFilter = filterType === 'all' || 
                            (filterType === 'image' && file.type?.startsWith('image/')) ||
                            (filterType === 'video' && file.type?.startsWith('video/'));
       return matchesSearch && matchesFilter;
     });
-  }, [files, searchQuery, filterType]);
+
+    // Apply Sorting
+    return [...result].sort((a, b) => {
+      if (sortBy === 'date') return (b.lastModified || 0) - (a.lastModified || 0);
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'size') return (b.size || 0) - (a.size || 0);
+      return 0;
+    });
+  }, [files, searchQuery, filterType, sortBy]);
+
+  const handlePreviewFile = async (file: DriveFile) => {
+    try {
+      if (file.handle.kind === 'file') {
+        const fileData = await (file.handle as FileSystemFileHandle).getFile();
+        const url = URL.createObjectURL(fileData);
+        setSelectedFile(file);
+        setSelectedFileUrl(url);
+      }
+    } catch (err) {
+      console.error('Failed to preview file', err);
+    }
+  };
+
+  const handleClosePreview = () => {
+    if (selectedFileUrl) {
+      URL.revokeObjectURL(selectedFileUrl);
+    }
+    setSelectedFile(null);
+    setSelectedFileUrl(null);
+  };
 
   const handleOpenFile = async (file: DriveFile) => {
     try {
@@ -131,16 +175,16 @@ export const DriveView: React.FC = () => {
             <HardDrive size={48} className="opacity-80" />
           </div>
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold text-theme-text tracking-tight">Local Drive</h2>
-            <p className="text-theme-muted leading-relaxed">
+            <h2 className="text-3xl font-bold text-theme-text tracking-tight uppercase">Local Drive</h2>
+            <p className="text-theme-muted leading-relaxed font-medium">
               Connect a local folder to index your personal photos and videos. Your files stay private and never leave your machine.
             </p>
           </div>
           <button 
             onClick={handleConnectFolder}
-            className="group flex items-center gap-3 px-8 py-4 bg-theme-text text-theme-bg rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-lg"
+            className="group flex items-center gap-3 px-8 py-4 bg-theme-text text-theme-bg rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg"
           >
-            <FolderPlus size={20} />
+            <FolderPlus size={18} />
             Connect Folder
           </button>
         </motion.div>
@@ -149,22 +193,22 @@ export const DriveView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col w-full h-full p-6 lg:p-10 gap-8 overflow-hidden">
+    <div className="flex flex-col w-full h-full p-6 lg:p-10 gap-8 overflow-hidden relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-3 text-theme-muted text-sm mb-2">
-            <HardDrive size={14} />
-            <span className="opacity-80">Drive</span>
-            <ChevronRight size={14} />
-            <span className="text-theme-text font-medium">{rootHandle.name}</span>
+          <div className="flex items-center gap-3 text-theme-muted text-[10px] font-black uppercase tracking-widest mb-2">
+            <HardDrive size={12} className="text-theme-text opacity-40" />
+            <span className="opacity-60">Santuario</span>
+            <ChevronRight size={12} className="opacity-40" />
+            <span className="text-theme-text">{rootHandle.name}</span>
           </div>
-          <h1 className="text-4xl font-bold text-theme-text tracking-tight">Gallery</h1>
+          <h1 className="text-4xl font-black text-theme-text tracking-tighter uppercase">Media Gallery</h1>
           {error && (
             <motion.p 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-400 text-sm mt-2 font-medium"
+              className="text-red-400 text-xs mt-2 font-black uppercase tracking-widest"
             >
               {error}
             </motion.p>
@@ -179,53 +223,67 @@ export const DriveView: React.FC = () => {
               placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full md:w-64 pl-12 pr-4 py-3 bg-theme-glass border border-theme-border rounded-2xl focus:outline-none focus:border-theme-text/30 text-theme-text placeholder:text-theme-muted transition-all"
+              className="w-full md:w-64 pl-12 pr-4 py-3 bg-theme-glass border border-theme-border rounded-2xl focus:outline-none focus:border-theme-text/30 text-theme-text placeholder:text-theme-muted transition-all font-bold text-sm"
             />
           </div>
+
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="bg-theme-glass border border-theme-border rounded-2xl px-4 py-3 text-sm font-black text-theme-text outline-none focus:border-theme-text/30 transition-all uppercase tracking-widest"
+          >
+            <option value="date">Recent</option>
+            <option value="name">Name</option>
+            <option value="size">Size</option>
+          </select>
+
           <div className="flex p-1 bg-theme-glass border border-theme-border rounded-2xl">
             <button 
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-theme-hover text-theme-text shadow-sm' : 'text-theme-muted hover:text-theme-text'}`}
+              className={`p-2.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-theme-text text-theme-bg shadow-lg' : 'text-theme-muted hover:text-theme-text'}`}
             >
-              <Grid size={20} />
+              <Grid size={18} />
             </button>
             <button 
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-theme-hover text-theme-text shadow-sm' : 'text-theme-muted hover:text-theme-text'}`}
+              className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-theme-text text-theme-bg shadow-lg' : 'text-theme-muted hover:text-theme-text'}`}
             >
-              <ListIcon size={20} />
+              <ListIcon size={18} />
             </button>
           </div>
+          
+          <div className="h-8 w-px bg-theme-border mx-1" />
+
           <button 
             onClick={indexFolder}
-            className="p-3 bg-theme-glass border border-theme-border rounded-2xl text-theme-muted hover:text-theme-text transition-all hover:rotate-180 duration-500"
+            className="p-3 bg-theme-glass border border-theme-border rounded-2xl text-theme-muted hover:text-theme-text transition-all hover:rotate-180 duration-700"
             title="Refresh items"
           >
-            <RefreshCw size={20} />
+            <RefreshCw size={18} />
           </button>
           <button 
             onClick={clearDrive}
             className="p-3 bg-theme-glass border border-theme-border rounded-2xl text-theme-muted hover:text-red-400 transition-all"
             title="Disconnect Drive"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+      <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
         {(['all', 'image', 'video'] as const).map((type) => (
           <button
             key={type}
             onClick={() => setFilterType(type)}
-            className={`px-6 py-2 rounded-full text-sm font-medium border transition-all ${
+            className={`px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${
               filterType === type 
-                ? 'bg-theme-text text-theme-bg border-theme-text' 
+                ? 'bg-theme-text text-theme-bg border-theme-text shadow-xl' 
                 : 'bg-theme-glass text-theme-muted border-theme-border hover:border-theme-text/30'
             }`}
           >
-            {type.charAt(0).toUpperCase() + type.slice(1)}s
+            {type}s
           </button>
         ))}
       </div>
@@ -233,14 +291,14 @@ export const DriveView: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
         {isIndexing ? (
-          <div className="w-full h-64 flex flex-col items-center justify-center gap-4 text-theme-muted">
-            <Loader2 size={40} className="animate-spin" />
-            <p className="font-medium">Indexing folder contents...</p>
+          <div className="w-full h-64 flex flex-col items-center justify-center gap-6 text-theme-muted">
+            <Loader2 size={48} className="animate-spin opacity-20" />
+            <p className="font-black uppercase tracking-[0.3em] text-xs">Indexing Sector...</p>
           </div>
         ) : filteredFiles.length === 0 ? (
-          <div className="w-full h-64 flex flex-col items-center justify-center gap-4 text-theme-muted border-2 border-dashed border-theme-border rounded-[2rem]">
-            <Search size={40} className="opacity-20" />
-            <p className="font-medium opacity-60">No matching items found</p>
+          <div className="w-full h-96 flex flex-col items-center justify-center gap-6 text-theme-muted border-2 border-dashed border-theme-border rounded-[3rem] opacity-50">
+            <Search size={48} className="opacity-20" />
+            <p className="font-black uppercase tracking-[0.3em] text-xs">Zero results found</p>
           </div>
         ) : (
           <motion.div 
@@ -248,8 +306,8 @@ export const DriveView: React.FC = () => {
             initial="hidden"
             animate="visible"
             className={viewMode === 'grid' 
-              ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-              : "flex flex-col gap-3"
+              ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8 pb-32"
+              : "flex flex-col gap-4 pb-32"
             }
           >
             {filteredFiles.map((file) => (
@@ -257,30 +315,31 @@ export const DriveView: React.FC = () => {
                 key={file.id}
                 variants={itemVariants}
                 layout
-                onClick={() => setSelectedFile(file)}
+                onClick={() => handlePreviewFile(file)}
                 className={`group relative overflow-hidden transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? "aspect-square rounded-[1.5rem] bg-theme-glass border border-theme-border hover:scale-[1.02] hover:shadow-xl active:scale-95"
-                    : "flex items-center gap-4 p-4 rounded-2xl bg-theme-glass border border-theme-border hover:bg-theme-hover transition-colors"
+                    ? "aspect-square rounded-[2rem] bg-theme-glass border border-theme-border hover:scale-[1.02] hover:shadow-2xl active:scale-95 shadow-lg"
+                    : "flex items-center gap-6 p-5 rounded-3xl bg-theme-glass border border-theme-border hover:bg-theme-hover transition-all shadow-md"
                 }`}
               >
                 {/* Thumbnail */}
-                <div className={viewMode === 'grid' ? "w-full h-full" : "w-16 h-16 rounded-xl overflow-hidden shrink-0"}>
+                <div className={viewMode === 'grid' ? "w-full h-full relative" : "w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative"}>
                   {previews[file.id] ? (
                     <img 
                       src={previews[file.id]} 
                       alt={file.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-theme-hover text-theme-muted">
-                      {file.type?.startsWith('video/') ? <Video size={viewMode === 'grid' ? 32 : 24} /> : <ImageIcon size={viewMode === 'grid' ? 32 : 24} />}
+                    <div className="w-full h-full flex items-center justify-center bg-theme-hover text-theme-text/40">
+                      {file.type?.startsWith('video/') ? <Video size={viewMode === 'grid' ? 40 : 28} /> : <ImageIcon size={viewMode === 'grid' ? 40 : 28} />}
                     </div>
                   )}
                   
                   {file.type?.startsWith('video/') && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                      <div className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white">
+                      <div className="p-3 bg-white/20 backdrop-blur-xl rounded-full text-white shadow-xl border border-theme-border/20">
                         <Play size={20} fill="currentColor" />
                       </div>
                     </div>
@@ -289,16 +348,16 @@ export const DriveView: React.FC = () => {
 
                 {/* Info Overlay / List Text */}
                 {viewMode === 'grid' ? (
-                  <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <p className="text-white font-medium text-sm truncate mb-1">{file.name}</p>
-                    <div className="flex items-center justify-between text-white/70 text-[10px]">
+                  <div className="absolute inset-0 flex flex-col justify-end p-6 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500">
+                    <p className="text-white font-black text-xs truncate mb-2 uppercase tracking-tight">{file.name}</p>
+                    <div className="flex items-center justify-between text-white/60 text-[10px] font-black uppercase tracking-widest">
                       <span>{((file.size || 0) / 1024 / 1024).toFixed(1)} MB</span>
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenFile(file);
                         }}
-                        className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                        className="p-2 hover:bg-white/20 rounded-xl transition-all"
                       >
                         <ExternalLink size={14} />
                       </button>
@@ -306,9 +365,9 @@ export const DriveView: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-theme-text font-medium truncate">{file.name}</h3>
-                    <div className="flex items-center gap-3 text-theme-muted text-xs mt-1">
-                      <span className="uppercase">{file.type?.split('/')[1] || 'file'}</span>
+                    <h3 className="text-theme-text font-black truncate uppercase tracking-tight text-sm">{file.name}</h3>
+                    <div className="flex items-center gap-4 text-theme-muted text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-60">
+                      <span>{file.type?.split('/')[1] || 'file'}</span>
                       <span className="w-1 h-1 rounded-full bg-theme-muted opacity-30" />
                       <span>{((file.size || 0) / 1024 / 1024).toFixed(1)} MB</span>
                     </div>
@@ -316,17 +375,17 @@ export const DriveView: React.FC = () => {
                 )}
 
                 {viewMode === 'list' && (
-                  <div className="flex items-center gap-2 pr-2">
+                  <div className="flex items-center gap-3 pr-2">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenFile(file);
                       }}
-                      className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-hover rounded-xl transition-all"
+                      className="p-3 text-theme-muted hover:text-theme-text hover:bg-theme-hover rounded-2xl transition-all"
                     >
                       <ExternalLink size={20} />
                     </button>
-                    <button className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-hover rounded-xl transition-all">
+                    <button className="p-3 text-theme-muted hover:text-theme-text hover:bg-theme-hover rounded-2xl transition-all">
                       <MoreVertical size={20} />
                     </button>
                   </div>
@@ -339,66 +398,70 @@ export const DriveView: React.FC = () => {
 
       {/* File Preview Modal */}
       <AnimatePresence>
-        {selectedFile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 pointer-events-none">
+        {selectedFile && selectedFileUrl && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 pointer-events-none">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedFile(null)}
-              className="absolute inset-0 bg-black/90 backdrop-blur-sm pointer-events-auto"
+              onClick={handleClosePreview}
+              className="absolute inset-0 bg-black/95 backdrop-blur-xl pointer-events-auto"
             />
             
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.9, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-5xl max-h-full bg-theme-bg rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl flex flex-col pointer-events-auto"
+              exit={{ scale: 0.9, opacity: 0, y: 40 }}
+              className="relative w-full max-w-6xl h-full max-h-[85vh] bg-theme-bg rounded-[3rem] border border-theme-border/30 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col pointer-events-auto"
             >
-              <div className="absolute top-6 right-6 z-10">
-                <button 
-                  onClick={() => setSelectedFile(null)}
-                  className="p-3 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition-all"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+              {/* Modal Close */}
+              <button 
+                onClick={handleClosePreview}
+                className="absolute top-8 right-8 z-50 p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl backdrop-blur-3xl transition-all border border-theme-border/20"
+              >
+                <X size={24} />
+              </button>
 
-              <div className="flex-1 flex items-center justify-center bg-black/20 overflow-hidden min-h-0">
+              <div className="flex-1 flex items-center justify-center bg-black/40 overflow-hidden min-h-0 relative group/player">
                 {selectedFile.type?.startsWith('image/') ? (
                   <img 
-                    src={previews[selectedFile.id]} 
+                    src={selectedFileUrl} 
                     alt={selectedFile.name}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain shadow-2xl"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-6 text-theme-muted">
-                    <Video size={80} className="opacity-20" />
-                    <p className="text-xl font-medium">Video preview coming soon</p>
-                    <button 
-                      onClick={() => handleOpenFile(selectedFile)}
-                      className="px-8 py-3 bg-white text-black rounded-2xl font-bold hover:scale-105 transition-transform"
-                    >
-                      Open Original
-                    </button>
-                  </div>
+                  <video 
+                    src={selectedFileUrl} 
+                    controls 
+                    autoPlay
+                    className="max-w-full max-h-full shadow-2xl"
+                  />
                 )}
               </div>
 
-              <div className="p-8 border-t border-theme-border flex items-center justify-between gap-6">
-                <div className="min-w-0">
-                  <h2 className="text-xl font-bold text-theme-text truncate">{selectedFile.name}</h2>
-                  <p className="text-theme-muted text-sm mt-1 uppercase tracking-wider">
-                    {selectedFile.type} • {((selectedFile.size || 0) / 1024).toFixed(1)} KB
-                  </p>
+              <div className="p-10 border-t border-theme-border/50 flex flex-col md:flex-row md:items-center justify-between gap-8 bg-theme-glass/30">
+                <div className="min-w-0 flex items-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-theme-text/5 flex items-center justify-center text-theme-text shrink-0">
+                    {selectedFile.type?.startsWith('video/') ? <Video size={32} /> : <ImageIcon size={32} />}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-theme-text truncate uppercase tracking-tighter">{selectedFile.name}</h2>
+                    <div className="flex items-center gap-4 text-theme-muted text-[10px] font-black uppercase tracking-[0.2em] mt-2">
+                      <span className="text-theme-text opacity-100">{selectedFile.type}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-theme-muted opacity-20" />
+                      <span>{((selectedFile.size || 0) / 1024 / 1024).toFixed(2)} MB</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-theme-muted opacity-20" />
+                      <span>Last Modified: {new Date(selectedFile.lastModified || 0).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex gap-4">
                   <button 
                     onClick={() => handleOpenFile(selectedFile)}
-                    className="flex items-center gap-2 px-6 py-3 bg-theme-hover text-theme-text rounded-2xl font-bold hover:bg-theme-glass transition-colors"
+                    className="flex items-center gap-3 px-8 py-4 bg-theme-text text-theme-bg rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-theme-text/10"
                   >
                     <ExternalLink size={20} />
-                    Open Original
+                    Open Source
                   </button>
                 </div>
               </div>

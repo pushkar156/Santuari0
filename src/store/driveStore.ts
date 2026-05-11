@@ -42,7 +42,6 @@ export const useDriveStore = create<DriveState>((set, get) => ({
     const { rootHandle } = get();
     if (!rootHandle) return;
 
-    // Check permissions first
     try {
       const permission = await rootHandle.queryPermission({ mode: 'read' });
       if (permission !== 'granted') {
@@ -53,7 +52,7 @@ export const useDriveStore = create<DriveState>((set, get) => ({
         }
       }
     } catch (e) {
-      console.warn('Permission check failed, browser might not support it yet', e);
+      console.warn('Permission check failed', e);
     }
 
     set({ isIndexing: true, error: null });
@@ -62,28 +61,37 @@ export const useDriveStore = create<DriveState>((set, get) => ({
       const indexedFiles: DriveFile[] = [];
       
       const scan = async (handle: FileSystemDirectoryHandle) => {
-        for await (const entry of handle.values()) {
+        for await (const entry of (handle as any).values()) {
           if (entry.kind === 'file') {
             const fileHandle = entry as FileSystemFileHandle;
             const file = await fileHandle.getFile();
             
-            // Only index images and videos for now
-            if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+            const isMedia = file.type.startsWith('image/') || 
+                           file.type.startsWith('video/') ||
+                           /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov)$/i.test(entry.name);
+
+            if (isMedia) {
               indexedFiles.push({
                 id: crypto.randomUUID(),
                 name: entry.name,
                 kind: 'file',
                 handle: fileHandle,
-                type: file.type,
+                type: file.type || (entry.name.endsWith('mp4') ? 'video/mp4' : 'image/jpeg'),
                 size: file.size,
                 lastModified: file.lastModified,
               });
             }
+          } else if (entry.kind === 'directory') {
+            await scan(entry as FileSystemDirectoryHandle);
           }
         }
       };
 
       await scan(rootHandle);
+      
+      // Default sort by last modified
+      indexedFiles.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+      
       set({ files: indexedFiles, isIndexing: false });
     } catch (err) {
       console.error('Failed to index folder:', err);

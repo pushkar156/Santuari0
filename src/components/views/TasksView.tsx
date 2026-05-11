@@ -450,7 +450,7 @@ export const TasksView: React.FC = () => {
                         className="w-full bg-theme-bg-accent/5 border border-theme-border/20 rounded-2xl pt-7 pb-3.5 px-4 text-[13px] font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 transition-all appearance-none cursor-pointer"
                       >
                         {lists.map(l => (
-                          <option key={l.id} value={l.id} className="bg-slate-900 text-white font-bold">{l.title}</option>
+                          <option key={l.id} value={l.id} className="bg-theme-contrast text-theme-text font-bold">{l.title}</option>
                         ))}
                       </select>
                       <ChevronDown size={14} className="absolute right-4 top-1/2 translate-y-1 text-theme-muted pointer-events-none" />
@@ -586,15 +586,15 @@ const TaskColumn: React.FC<{
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.98 }}
                 transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                className="absolute right-0 top-full mt-3 w-52 bg-black/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-[60] overflow-hidden"
+                className="absolute right-0 top-full mt-3 w-52 bg-theme-glass backdrop-blur-3xl border border-theme-border/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] z-[60] overflow-hidden"
               >
                 {/* Header */}
-                <div className="px-4 py-3 border-b border-white/5 bg-white/5">
+                <div className="px-4 py-3 border-b border-theme-border/10 bg-theme-hover">
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">List Options</p>
                 </div>
 
                 {/* Sort Section */}
-                <div className="p-1.5 border-b border-white/5">
+                <div className="p-1.5 border-b border-theme-border/10">
                   <p className="px-3 py-1 text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Sort By</p>
                   {[
                     { id: 'manual', label: 'My Order', icon: LayoutGrid },

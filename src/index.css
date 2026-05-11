@@ -7,7 +7,7 @@
     --theme-text: #ffffff;
     --theme-muted: rgba(255, 255, 255, 0.7);
     --theme-glass: rgba(255, 255, 255, 0.1);
-    --theme-bg: rgba(15, 23, 42, 0.4);
+    --theme-bg: rgba(2, 6, 23, 0.4);
     --theme-border: rgba(255, 255, 255, 0.2);
     --theme-hover: rgba(255, 255, 255, 0.2);
     --theme-bg-accent: #ffffff;
@@ -21,24 +21,30 @@
   }
   
   .light-mode {
-    --theme-bg: rgba(255, 255, 255, 0.4);
-    --theme-text: #020617; /* Slate 950 - Dark Grey/Black */
-    --theme-muted: #475569; /* Slate 600 */
+    --theme-bg: rgba(255, 255, 255, 0.35);
+    --theme-text: #000000;
+    --theme-muted: rgba(0, 0, 0, 0.5);
     --theme-glass: rgba(255, 255, 255, 0.65);
-    --theme-border: rgba(0, 0, 0, 0.12);
-    --theme-hover: rgba(0, 0, 0, 0.05);
-    --theme-bg-accent: #020617;
+    --theme-border: rgba(0, 0, 0, 0.08);
+    --theme-hover: rgba(0, 0, 0, 0.04);
+    --theme-bg-accent: #000000;
     --theme-contrast: #ffffff;
 
-    /* Gooey Nav Colors - Light Mode (Solid Black) */
+    /* Gooey Nav Colors - Light Mode (Black Only) */
     --color-1: #000000;
     --color-2: #000000;
     --color-3: #000000;
     --color-4: #000000;
   }
 
+  /* Smooth micro-interactions globally */
+  * {
+    cursor: inherit;
+  }
+
   body {
     @apply bg-slate-950 text-theme-text font-sans antialiased overflow-hidden transition-colors duration-500;
+    cursor: default;
   }
 }
 
@@ -49,7 +55,10 @@
   }
   
   .light-mode .theme-glass {
-    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.8), 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+    box-shadow: 
+      inset 0 1px 2px 0 rgba(255, 255, 255, 0.9), 
+      0 8px 32px -8px rgba(0, 0, 0, 0.08),
+      0 2px 8px -2px rgba(0, 0, 0, 0.04);
   }
   
   .theme-zen {

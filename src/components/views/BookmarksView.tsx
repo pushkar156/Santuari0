@@ -13,7 +13,8 @@ import {
   List as ListIcon,
   FolderPlus,
   Loader2,
-  ChevronLeft
+  ChevronLeft,
+  LayoutGrid
 } from 'lucide-react';
 import { 
   DndContext, 
@@ -153,34 +154,34 @@ export const BookmarksView: React.FC = () => {
 
   if (isLoading && tree.length === 0) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-slate-950 relative z-20">
-        <Loader2 size={48} className="text-white animate-spin opacity-20" />
+      <div className="h-screen w-full flex items-center justify-center relative z-20">
+        <Loader2 size={48} className="text-theme-text animate-spin opacity-20" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden relative z-10 bg-slate-950 text-slate-200">
-      {/* Header */}
-      <header className="h-20 flex-shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-slate-900/50 backdrop-blur-xl relative z-30">
+    <div className="h-screen flex flex-col overflow-hidden relative z-10 select-none">
+      {/* Premium Header */}
+      <header className="h-20 flex-shrink-0 flex items-center justify-between px-8 border-b border-theme-border/20 backdrop-blur-3xl bg-theme-glass/80 shadow-2xl relative z-30">
         <div className="flex items-center gap-8">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-3 hover:bg-white/5 rounded-2xl text-slate-400 hover:text-white transition-all active:scale-95"
+            className="p-3 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-text transition-all active:scale-95 group"
           >
-            {isSidebarOpen ? <ChevronLeft size={22} /> : <Bookmark size={22} />}
+            {isSidebarOpen ? <ChevronLeft size={22} /> : <LayoutGrid size={22} className="group-hover:rotate-90 transition-transform duration-500" />}
           </button>
           
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-black text-white tracking-tighter">Bookmarks</h1>
-            <div className="h-6 w-px bg-white/10" />
+            <h1 className="text-2xl font-black text-theme-text tracking-tighter">Bookmarks</h1>
+            <div className="h-6 w-px bg-theme-border/20" />
             <div className="flex items-center gap-2 overflow-hidden">
               {breadcrumbs.map((node, i) => (
                 <React.Fragment key={node.id}>
-                  {i > 0 && <ChevronRight size={14} className="text-slate-600 flex-shrink-0" />}
+                  {i > 0 && <ChevronRight size={14} className="text-theme-muted/40 flex-shrink-0" />}
                   <button 
                     onClick={() => setActiveFolder(node.id)}
-                    className={`text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-colors hover:text-white ${i === breadcrumbs.length - 1 ? 'text-white' : 'text-slate-500'}`}
+                    className={`text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap transition-all hover:scale-105 ${i === breadcrumbs.length - 1 ? 'text-theme-bg-accent' : 'text-theme-muted hover:text-theme-text'}`}
                   >
                     {node.title || 'Root'}
                   </button>
@@ -192,35 +193,35 @@ export const BookmarksView: React.FC = () => {
 
         <div className="flex items-center gap-6">
           <div className="relative group w-80">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-white transition-colors" />
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted group-focus-within:text-theme-bg-accent transition-colors" />
             <input 
               type="text" 
               placeholder="Search bookmarks..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm text-white outline-none focus:border-white/20 focus:bg-slate-900 transition-all font-medium placeholder-slate-600"
+              className="w-full bg-theme-bg-accent/5 border border-theme-border/30 rounded-2xl py-3 pl-12 pr-6 text-sm text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 transition-all font-bold placeholder-theme-muted/50"
             />
           </div>
           
-          <div className="flex items-center bg-slate-950/50 p-1 rounded-xl border border-white/5">
+          <div className="flex items-center bg-theme-bg-accent/5 p-1 rounded-xl border border-theme-border/30">
             <button 
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white/10 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-theme-bg-accent text-theme-contrast shadow-lg shadow-theme-bg-accent/20' : 'text-theme-muted hover:text-theme-text'}`}
             >
               <Grid size={18} />
             </button>
             <button 
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white/10 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-theme-bg-accent text-theme-contrast shadow-lg shadow-theme-bg-accent/20' : 'text-theme-muted hover:text-theme-text'}`}
             >
               <ListIcon size={18} />
             </button>
           </div>
           
-          <div className="h-6 w-px bg-white/10" />
+          <div className="h-6 w-px bg-theme-border/20 mx-2" />
           
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-950 hover:bg-slate-100 rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-white/5">
-            <Plus size={16} />
+          <button className="flex items-center gap-3 px-6 py-2.5 bg-theme-bg-accent text-theme-contrast hover:scale-[1.02] active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-theme-bg-accent/30">
+            <Plus size={18} />
             Add New
           </button>
         </div>
@@ -234,55 +235,59 @@ export const BookmarksView: React.FC = () => {
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 320, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="flex-shrink-0 flex flex-col border-r border-white/5 bg-slate-900/30 backdrop-blur-md overflow-hidden relative z-20"
+              className="flex-shrink-0 flex flex-col border-r border-theme-border/20 bg-theme-glass/40 backdrop-blur-3xl overflow-hidden relative z-20 shadow-2xl"
             >
-              <div className="p-6 flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar">
-                <div className="space-y-1">
-                  <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2 mb-4">Tree Explorer</h2>
-                  {tree[0]?.children?.map(node => (
-                    <FolderTreeItem 
-                      key={node.id} 
-                      node={node} 
-                      level={0} 
-                      activeId={activeFolderId}
-                      onSelect={setActiveFolder}
-                    />
-                  ))}
+              <div className="p-6 flex flex-col gap-8 h-full overflow-y-auto custom-scrollbar">
+                <div className="space-y-4">
+                  <h2 className="text-[10px] font-black text-theme-muted uppercase tracking-[0.3em] px-2">Tree Explorer</h2>
+                  <div className="space-y-1">
+                    {tree[0]?.children?.map(node => (
+                      <FolderTreeItem 
+                        key={node.id} 
+                        node={node} 
+                        level={0} 
+                        activeId={activeFolderId}
+                        onSelect={setActiveFolder}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </motion.aside>
           )}
         </AnimatePresence>
 
-        {/* Main Grid */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10 p-10">
-          <div className="max-w-7xl mx-auto space-y-12">
+        {/* Main Viewport */}
+        <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10 p-12 bg-theme-bg/10">
+          <div className="max-w-7xl mx-auto space-y-16">
             
-            {/* Quick Folders Section */}
+            {/* Folder Grid Section */}
             {!searchQuery && folders.length > 0 && (
-              <section className="space-y-6">
+              <section className="space-y-8">
                 <div className="flex items-center justify-between px-2">
-                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Folders</h3>
-                  <button className="text-[10px] font-black text-slate-600 hover:text-white uppercase tracking-widest flex items-center gap-2 transition-colors">
+                  <h3 className="text-[10px] font-black text-theme-muted uppercase tracking-[0.3em] flex items-center gap-2">
+                    <Folder size={14} className="text-theme-bg-accent" /> Folders
+                  </h3>
+                  <button className="text-[9px] font-black text-theme-bg-accent hover:scale-105 uppercase tracking-[0.2em] flex items-center gap-2 transition-all">
                     <FolderPlus size={14} />
                     New Folder
                   </button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                   {folders.map(folder => (
                     <motion.button
                       key={folder.id}
-                      whileHover={{ y: -4, scale: 1.02 }}
+                      whileHover={{ y: -6, scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setActiveFolder(folder.id)}
-                      className="group flex flex-col items-start gap-4 p-5 rounded-3xl bg-slate-900/50 border border-white/5 hover:border-white/10 transition-all hover:bg-slate-800/50 text-left relative overflow-hidden"
+                      className="group flex flex-col items-start gap-6 p-6 rounded-[32px] theme-glass border border-theme-border/20 hover:border-theme-bg-accent/30 transition-all hover:bg-theme-bg-accent/5 text-left relative overflow-hidden shadow-xl"
                     >
-                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform duration-500">
-                        <Folder size={24} />
+                      <div className="w-14 h-14 rounded-2xl bg-theme-bg-accent/10 flex items-center justify-center text-theme-bg-accent group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-inner">
+                        <Folder size={28} />
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-sm font-bold block truncate w-full text-white">{folder.title || 'Untitled Folder'}</span>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{folder.children?.length || 0} items</span>
+                      <div className="space-y-1.5 w-full">
+                        <span className="text-sm font-black block truncate text-theme-text uppercase tracking-tight">{folder.title || 'Untitled'}</span>
+                        <span className="text-[9px] font-black text-theme-muted uppercase tracking-[0.2em] opacity-60">{folder.children?.length || 0} items</span>
                       </div>
                     </motion.button>
                   ))}
@@ -290,10 +295,11 @@ export const BookmarksView: React.FC = () => {
               </section>
             )}
 
-            {/* Bookmarks Section */}
-            <section className="space-y-6 pb-24">
+            {/* Bookmarks Grid Section */}
+            <section className="space-y-8 pb-32">
               <div className="flex items-center justify-between px-2">
-                <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">
+                <h3 className="text-[10px] font-black text-theme-muted uppercase tracking-[0.3em] flex items-center gap-2">
+                  <Bookmark size={14} className="text-theme-bg-accent" />
                   {searchQuery ? `Search Results (${bookmarks.length})` : 'Bookmarks'}
                 </h3>
               </div>
@@ -309,8 +315,8 @@ export const BookmarksView: React.FC = () => {
                     strategy={viewMode === 'grid' ? rectSortingStrategy : verticalListSortingStrategy}
                   >
                     <div className={viewMode === 'grid' 
-                      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
-                      : "flex flex-col gap-3"
+                      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" 
+                      : "flex flex-col gap-4"
                     }>
                       <AnimatePresence mode="popLayout">
                         {bookmarks.map((bookmark) => (
@@ -328,13 +334,13 @@ export const BookmarksView: React.FC = () => {
                   </SortableContext>
                 </DndContext>
               ) : (
-                <div className="py-32 flex flex-col items-center justify-center text-center space-y-6 opacity-40">
-                  <div className="p-8 bg-slate-900 rounded-[2.5rem] border border-white/5">
-                    <Bookmark size={48} className="text-slate-600" />
+                <div className="py-40 flex flex-col items-center justify-center text-center space-y-8 opacity-20">
+                  <div className="p-12 theme-glass rounded-[4rem] border border-theme-border/10">
+                    <Bookmark size={64} className="text-theme-muted" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-black uppercase tracking-[0.2em]">No bookmarks found</p>
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">This folder is empty or no search results</p>
+                  <div className="space-y-2">
+                    <p className="text-lg font-black uppercase tracking-[0.3em] text-theme-text">Void</p>
+                    <p className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em]">No results found in this sector</p>
                   </div>
                 </div>
               )}
@@ -361,20 +367,20 @@ const FolderTreeItem = ({ node, level, activeId, onSelect }: {
   return (
     <div className="space-y-1">
       <div 
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
-        className={`group flex items-center gap-3 py-2 pr-4 rounded-xl transition-all cursor-pointer ${
-          isActive ? 'bg-white text-slate-950 shadow-lg' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+        style={{ paddingLeft: `${level * 16 + 12}px` }}
+        className={`group flex items-center gap-4 py-3 pr-4 rounded-2xl transition-all cursor-pointer ${
+          isActive ? 'bg-theme-bg-accent text-theme-contrast shadow-xl shadow-theme-bg-accent/20' : 'text-theme-muted hover:bg-theme-bg-accent/10 hover:text-theme-text'
         }`}
         onClick={() => {
           onSelect(node.id);
           setIsOpen(!isOpen);
         }}
       >
-        <div className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>
-          <ChevronRight size={14} className={isActive ? 'text-slate-950/50' : 'text-slate-600'} />
+        <div className={`transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}>
+          <ChevronRight size={14} className={isActive ? 'text-theme-contrast/50' : 'text-theme-muted/40'} />
         </div>
-        <Folder size={16} className={isActive ? 'text-slate-950' : 'text-amber-500/60 group-hover:text-amber-500 transition-colors'} />
-        <span className="text-[11px] font-bold uppercase tracking-wider truncate flex-1">{node.title || 'Untitled'}</span>
+        <Folder size={18} className={isActive ? 'text-theme-contrast' : 'text-theme-bg-accent/60 group-hover:text-theme-bg-accent transition-colors'} />
+        <span className="text-xs font-black uppercase tracking-tight truncate flex-1">{node.title || 'Untitled'}</span>
       </div>
       
       {isOpen && node.children && (
@@ -413,28 +419,28 @@ const BookmarkCard = ({ bookmark, viewMode, isBlurred, onRemove, faviconUrl }: {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
         onClick={handleClick}
-        className="group flex items-center gap-5 p-4 rounded-2xl bg-slate-900/50 border border-white/5 hover:border-white/10 hover:bg-slate-800/80 transition-all cursor-pointer"
+        className="group flex items-center gap-6 p-5 rounded-3xl theme-glass border border-theme-border/20 hover:border-theme-bg-accent/30 hover:bg-theme-bg-accent/5 transition-all cursor-pointer shadow-lg"
       >
-        <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+        <div className="w-12 h-12 rounded-2xl bg-theme-bg-accent/5 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-inner">
           {faviconUrl ? (
-            <img src={faviconUrl} alt="" className="w-5 h-5 object-contain" />
+            <img src={faviconUrl} alt="" className="w-6 h-6 object-contain" />
           ) : (
-            <Bookmark size={18} className="text-slate-500" />
+            <Bookmark size={20} className="text-theme-muted" />
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className={`text-sm font-bold text-white truncate ${isBlurred ? 'privacy-blur' : ''}`}>{bookmark.title}</h4>
-          <p className="text-[10px] text-slate-500 truncate font-medium">{bookmark.url}</p>
+          <h4 className={`text-sm font-black text-theme-text truncate uppercase tracking-tight ${isBlurred ? 'privacy-blur' : ''}`}>{bookmark.title}</h4>
+          <p className="text-[10px] text-theme-muted truncate font-black uppercase tracking-widest opacity-40">{bookmark.url}</p>
         </div>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-2">
-          <button className="p-2 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-colors">
-            <Edit2 size={14} />
+        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity px-4">
+          <button className="p-2.5 hover:bg-theme-bg-accent/10 rounded-xl text-theme-muted hover:text-theme-text transition-colors">
+            <Edit2 size={16} />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="p-2 hover:bg-red-500/10 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
+            className="p-2.5 hover:bg-red-500/10 rounded-xl text-theme-muted hover:text-red-400 transition-colors"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         </div>
       </motion.div>
@@ -448,38 +454,38 @@ const BookmarkCard = ({ bookmark, viewMode, isBlurred, onRemove, faviconUrl }: {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       onClick={handleClick}
-      className="group relative flex flex-col p-6 rounded-[2rem] bg-slate-900/50 border border-white/5 hover:border-white/10 hover:bg-slate-800/50 transition-all cursor-pointer h-full overflow-hidden shadow-2xl"
+      className="group relative flex flex-col p-8 rounded-[40px] theme-glass border border-theme-border/20 hover:border-theme-bg-accent/30 hover:bg-theme-bg-accent/5 transition-all cursor-pointer h-full overflow-hidden shadow-2xl"
     >
-      <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-20">
+      <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-20">
         <button 
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="p-2 bg-slate-950/80 backdrop-blur-md rounded-xl text-slate-400 hover:text-red-400 border border-white/5"
+          className="p-3 bg-theme-glass backdrop-blur-xl rounded-2xl text-theme-muted hover:text-red-400 border border-theme-border/20 shadow-xl"
         >
-          <Trash2 size={14} />
+          <Trash2 size={16} />
         </button>
       </div>
 
-      <div className="space-y-6 h-full flex flex-col">
-        <div className="w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+      <div className="space-y-8 h-full flex flex-col">
+        <div className="w-16 h-16 rounded-3xl bg-theme-bg-accent/10 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all duration-700">
           {faviconUrl ? (
-            <img src={faviconUrl} alt="" className="w-7 h-7 object-contain" />
+            <img src={faviconUrl} alt="" className="w-8 h-8 object-contain" />
           ) : (
-            <Bookmark size={24} className="text-slate-500" />
+            <Bookmark size={28} className="text-theme-bg-accent" />
           )}
         </div>
         
-        <div className="space-y-2 flex-1">
-          <h4 className={`text-lg font-black text-white leading-tight line-clamp-2 ${isBlurred ? 'privacy-blur' : ''}`}>
+        <div className="space-y-3 flex-1">
+          <h4 className={`text-xl font-black text-theme-text leading-tight line-clamp-2 uppercase tracking-tighter ${isBlurred ? 'privacy-blur' : ''}`}>
             {bookmark.title || 'Untitled Bookmark'}
           </h4>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">
+          <p className="text-[10px] font-black text-theme-muted uppercase tracking-[0.2em] truncate opacity-40">
             {new URL(bookmark.url || 'http://unknown').hostname}
           </p>
         </div>
 
-        <div className="pt-4 mt-auto flex items-center justify-between border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Open Bookmark</span>
-          <ExternalLink size={14} className="text-slate-500 group-hover:text-white" />
+        <div className="pt-6 mt-auto flex items-center justify-between border-t border-theme-border/10 opacity-30 group-hover:opacity-100 transition-opacity">
+          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-theme-muted">Explore Node</span>
+          <ExternalLink size={16} className="text-theme-muted group-hover:text-theme-bg-accent transition-colors" />
         </div>
       </div>
     </motion.div>

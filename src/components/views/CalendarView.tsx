@@ -163,7 +163,7 @@ export const CalendarView: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="h-screen w-full flex items-center justify-center p-6 bg-slate-950/20 backdrop-blur-sm">
+      <div className="h-screen w-full flex items-center justify-center p-6 bg-theme-bg/20 backdrop-blur-sm">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -529,7 +529,7 @@ export const CalendarView: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md theme-glass p-8 rounded-[32px] border border-white/10 shadow-[0_32px_64px_rgba(0,0,0,0.5)]"
+              className="relative w-full max-w-md theme-glass p-8 rounded-[32px] border border-theme-border/30 shadow-[0_32px_64px_rgba(0,0,0,0.3)]"
             >
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-theme-bg-accent rounded-2xl flex items-center justify-center text-theme-contrast">
@@ -710,7 +710,7 @@ const WeekGrid = ({ days, items, onSelectEvent, onGridClick }: { days: Date[], i
                   <div 
                     key={h} 
                     onClick={() => onGridClick(day, h)}
-                    className="h-[100px] hover:bg-theme-bg-accent/5 transition-colors cursor-crosshair group-hover/day:opacity-100 opacity-0"
+                    className="h-[100px] hover:bg-theme-bg-accent/5 transition-colors cursor-cell group-hover/day:opacity-100 opacity-0"
                   />
                 ))}
 
@@ -776,7 +776,7 @@ const MonthGrid = ({ days, items, onSelectEvent }: { days: Date[], items: any[],
                   <div 
                     key={item.id}
                     onClick={() => onSelectEvent(item.id)}
-                    className={`text-[9px] px-2.5 py-1.5 rounded-lg border-l-2 truncate font-black tracking-tight cursor-pointer hover:scale-[1.02] active:scale-98 transition-all ${item.isTask ? 'bg-theme-bg-accent/10 border-theme-bg-accent text-theme-text' : 'bg-white/5 border-theme-border text-theme-text/80'}`}
+                    className={`text-[9px] px-2.5 py-1.5 rounded-lg border-l-2 truncate font-black tracking-tight cursor-pointer hover:scale-[1.02] active:scale-98 transition-all ${item.isTask ? 'bg-theme-bg-accent/10 border-theme-bg-accent text-theme-text' : 'bg-theme-glass/40 border-theme-border text-theme-text/80'}`}
                     style={{ borderLeftColor: item.calendarColor }}
                   >
                     {item.isTask && <CheckCircle2 size={8} className="inline mr-1 text-theme-bg-accent" />}
@@ -839,7 +839,7 @@ const EventChip = ({ item, hourHeight, onClick }: { item: any, hourHeight: numbe
       animate={{ opacity: 1, x: 0, scale: 1 }}
       whileHover={{ x: 4, scale: 1.02 }}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={`absolute left-1 right-2 rounded-2xl border-l-4 p-3 overflow-hidden cursor-pointer transition-all z-10 theme-glass border border-white/10 group shadow-2xl backdrop-blur-2xl ${item.isTask ? 'ring-1 ring-theme-bg-accent/30' : ''}`}
+      className={`absolute left-1 right-2 rounded-2xl border-l-4 p-3 overflow-hidden cursor-pointer transition-all z-10 theme-glass border border-theme-border/20 group shadow-2xl backdrop-blur-2xl ${item.isTask ? 'ring-1 ring-theme-bg-accent/30' : ''}`}
       style={{
         top: startHour * hourHeight + 4,
         height: duration * hourHeight - 8,
