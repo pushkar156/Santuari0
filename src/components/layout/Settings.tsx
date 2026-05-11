@@ -303,7 +303,6 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Footer Actions */}
