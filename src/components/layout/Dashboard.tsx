@@ -14,6 +14,7 @@ import { TasksView } from '../views/TasksView';
 import { CalendarView } from '../views/CalendarView';
 import { BookmarksView } from '../views/BookmarksView';
 import { DriveView } from '../views/DriveView';
+import { QuickLinks } from '../widgets/QuickLinks/QuickLinks';
 import { Bot } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
@@ -64,13 +65,14 @@ export const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Main Content Column (Clock, Search) */}
+              {/* Main Content Column (Clock, Search, QuickLinks) */}
               <div className="col-span-12 md:col-span-8 md:col-start-5 flex flex-col items-center space-y-10 py-4">
                 <div className="flex flex-col items-center w-full">
                   <Clock />
                 </div>
-                <div className="w-full max-w-2xl">
+                <div className="w-full max-w-2xl flex flex-col items-center space-y-6">
                   <SearchBar />
+                  <QuickLinks />
                 </div>
               </div>
             </div>
