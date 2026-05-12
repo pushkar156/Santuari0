@@ -5,13 +5,13 @@
 @layer base {
   :root {
     --theme-text: #ffffff;
-    --theme-muted: rgba(255, 255, 255, 0.7);
-    --theme-glass: rgba(255, 255, 255, 0.1);
-    --theme-bg: rgba(2, 6, 23, 0.4);
-    --theme-border: rgba(255, 255, 255, 0.2);
-    --theme-hover: rgba(255, 255, 255, 0.2);
+    --theme-muted: rgba(255, 255, 255, 0.6);
+    --theme-glass: rgba(255, 255, 255, 0.08);
+    --theme-bg: rgba(0, 0, 0, 0.4);
+    --theme-border: rgba(255, 255, 255, 0.12);
+    --theme-hover: rgba(255, 255, 255, 0.15);
     --theme-bg-accent: #ffffff;
-    --theme-contrast: #020617;
+    --theme-contrast: #000000;
     
     /* Gooey Nav Colors - Dark Mode (White Only) */
     --color-1: #ffffff;
@@ -21,12 +21,12 @@
   }
   
   .light-mode {
-    --theme-bg: rgba(255, 255, 255, 0.35);
+    --theme-bg: rgba(255, 255, 255, 0.15);
     --theme-text: #000000;
-    --theme-muted: rgba(0, 0, 0, 0.5);
-    --theme-glass: rgba(255, 255, 255, 0.65);
+    --theme-muted: rgba(0, 0, 0, 0.55);
+    --theme-glass: rgba(255, 255, 255, 0.35); /* Frosted Glass Look */
     --theme-border: rgba(0, 0, 0, 0.08);
-    --theme-hover: rgba(0, 0, 0, 0.04);
+    --theme-hover: rgba(0, 0, 0, 0.06);
     --theme-bg-accent: #000000;
     --theme-contrast: #ffffff;
 
@@ -38,33 +38,25 @@
   }
 
   /* Smooth micro-interactions globally */
-  * {
-    cursor: inherit;
-  }
+
 
   body {
-    @apply bg-slate-950 text-theme-text font-sans antialiased overflow-hidden transition-colors duration-500;
-    cursor: default;
+    @apply bg-black text-theme-text font-sans antialiased overflow-hidden transition-colors duration-500;
   }
 }
 
 @layer utilities {
   .theme-glass {
-    @apply bg-theme-glass backdrop-blur-3xl border border-theme-border rounded-2xl shadow-xl transition-all duration-300;
-    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    @apply bg-theme-glass backdrop-blur-2xl border border-theme-border rounded-2xl shadow-xl transition-all duration-300;
   }
   
   .light-mode .theme-glass {
+    @apply backdrop-blur-[32px] border-white/40;
     box-shadow: 
-      inset 0 1px 2px 0 rgba(255, 255, 255, 0.9), 
-      0 8px 32px -8px rgba(0, 0, 0, 0.08),
-      0 2px 8px -2px rgba(0, 0, 0, 0.04);
+      0 8px 32px -8px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   }
   
-  .theme-zen {
-    @apply bg-transparent border-none shadow-none transition-colors duration-300;
-  }
-
   .text-shadow-sm {
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }

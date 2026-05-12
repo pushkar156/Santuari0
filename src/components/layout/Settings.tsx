@@ -192,9 +192,9 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
                   <button 
                     onClick={handleSpotifyConnect}
                     disabled={!!spotifyToken}
-                    className={`py-4 rounded-xl font-bold transition-all text-lg ${spotifyToken ? 'bg-green-500/10 text-green-500 cursor-not-allowed border border-green-500/20' : 'bg-[#1DB954] text-white hover:bg-[#1ed760] shadow-lg shadow-[#1DB954]/20'}`}
+                    className={`py-4 rounded-xl font-bold transition-all text-lg ${spotifyToken ? 'bg-theme-bg-accent/10 text-theme-bg-accent cursor-not-allowed border border-theme-bg-accent/20' : 'bg-theme-bg-accent text-theme-contrast hover:opacity-90 shadow-lg shadow-theme-bg-accent/20'}`}
                   >
-                    {spotifyToken ? 'Connected' : 'Connect'}
+                    {spotifyToken ? 'Connected' : 'Connect Spotify'}
                   </button>
                   <button 
                     onClick={handleSpotifyDisconnect}
@@ -257,9 +257,9 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
                   <button 
                     onClick={handleWeatherConnect}
                     disabled={weatherConnected}
-                    className={`py-4 rounded-xl font-bold transition-all text-lg ${weatherConnected ? 'bg-orange-500/10 text-orange-500 cursor-not-allowed border border-orange-500/20' : 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/20'}`}
+                    className={`py-4 rounded-xl font-bold transition-all text-lg ${weatherConnected ? 'bg-theme-bg-accent/10 text-theme-bg-accent cursor-not-allowed border border-theme-bg-accent/20' : 'bg-theme-bg-accent text-theme-contrast hover:opacity-90 shadow-lg shadow-theme-bg-accent/20'}`}
                   >
-                    {weatherConnected ? 'Connected' : 'Connect'}
+                    {weatherConnected ? 'Connected' : 'Connect Weather'}
                   </button>
                   <button 
                     onClick={handleWeatherDisconnect}
@@ -285,9 +285,9 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
                   <button 
                     onClick={() => syncGoogleTasks(true)}
                     disabled={googleAuthenticated || isGoogleLoading}
-                    className={`py-4 rounded-xl font-bold transition-all text-lg flex items-center justify-center gap-2 ${googleAuthenticated ? 'bg-blue-500/10 text-blue-500 cursor-not-allowed border border-blue-500/20' : 'bg-[#4285F4] text-white hover:bg-[#357ae8] shadow-lg shadow-[#4285F4]/20'}`}
+                    className={`py-4 rounded-xl font-bold transition-all text-lg flex items-center justify-center gap-2 ${googleAuthenticated ? 'bg-theme-bg-accent/10 text-theme-bg-accent cursor-not-allowed border border-theme-bg-accent/20' : 'bg-theme-bg-accent text-theme-contrast hover:opacity-90 shadow-lg shadow-theme-bg-accent/20'}`}
                   >
-                    {isGoogleLoading ? <Loader2 className="animate-spin" size={20} /> : (googleAuthenticated ? 'Connected' : 'Connect')}
+                    {isGoogleLoading ? <Loader2 className="animate-spin" size={20} /> : (googleAuthenticated ? 'Connected' : 'Connect Google Tasks')}
                   </button>
                   <button 
                     onClick={logoutGoogleTasks}

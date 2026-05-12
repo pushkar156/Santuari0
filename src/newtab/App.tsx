@@ -8,7 +8,7 @@ const App = () => {
 
   return (
     <div 
-      className={`relative min-h-screen w-full ${mode === 'light' ? 'bg-slate-100 light-mode' : 'bg-slate-950'} bg-cover bg-center bg-no-repeat transition-all duration-700 ease-out font-sans text-theme-text`}
+      className={`relative min-h-screen w-full ${mode === 'light' ? 'bg-white light-mode' : 'bg-black'} bg-cover bg-center bg-no-repeat transition-all duration-700 ease-out font-sans text-theme-text`}
       style={{ backgroundImage: bgUrl ? `url(${bgUrl})` : undefined }}
     >
       {/* Overlay to ensure text readability over the image */}

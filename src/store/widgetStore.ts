@@ -9,7 +9,6 @@ export interface QuickLink {
 }
 
 interface WidgetState {
-  theme: 'glass' | 'zen';
   mode: 'dark' | 'light';
   settings: {
     search: {
@@ -39,7 +38,6 @@ interface WidgetState {
   recentBackgrounds: string[];
   weatherConnected: boolean;
   setWeatherConnected: (connected: boolean) => void;
-  setTheme: (theme: 'glass' | 'zen') => void;
   setMode: (mode: 'dark' | 'light') => void;
   toggleBlur: () => void;
   setSpotifyToken: (token: string | null) => void;
@@ -72,7 +70,6 @@ const storageAdapter: StateStorage = {
 export const useWidgetStore = create<WidgetState>()(
   persist(
     (set) => ({
-      theme: 'glass',
       mode: 'dark',
       settings: {
         search: {
@@ -93,8 +90,6 @@ export const useWidgetStore = create<WidgetState>()(
       customBackground: null,
       recentBackgrounds: [],
       weatherConnected: false,
-
-      setTheme: (theme) => set({ theme }),
 
       setMode: (mode) => set({ mode }),
 
