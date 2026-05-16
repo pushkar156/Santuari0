@@ -2,7 +2,7 @@
  * Service for interacting with the Google Tasks API via chrome.identity
  */
 
-const BASE_URL = 'https://www.googleapis.com/tasks/v1';
+const BASE_URL = 'https://tasks.googleapis.com/tasks/v1';
 
 export interface GoogleTask {
   id: string;
@@ -114,16 +114,20 @@ export class GoogleTasksService {
    * Create a new task in a list
    */
   static async createTask(listId: string, task: Partial<GoogleTask>, parent?: string, previous?: string): Promise<GoogleTask> {
-    let url = `${BASE_URL}/lists/${listId}/tasks?`;
-    if (parent) url += `parent=${parent}&`;
-    if (previous) url += `previous=${previous}`;
-
-    const response = await this.fetchWithAuth(url, {
+    const url = new URL(`${BASE_URL}/lists/${listId}/tasks`);
+    if (parent) url.searchParams.append('parent', parent);
+    if (previous) url.searchParams.append('previous', previous);
+    
+    const response = await this.fetchWithAuth(url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...task, status: 'needsAction' }),
+      body: JSON.stringify(task),
     });
-    if (!response.ok) throw new Error('Failed to create task');
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || 'Failed to create task');
+    }
     return response.json();
   }
 
@@ -146,11 +150,11 @@ export class GoogleTasksService {
    * previous: optional taskId after which the task should be placed
    */
   static async moveTask(listId: string, taskId: string, parent?: string, previous?: string): Promise<GoogleTask> {
-    let url = `${BASE_URL}/lists/${listId}/tasks/${taskId}/move?`;
-    if (parent) url += `parent=${parent}&`;
-    if (previous) url += `previous=${previous}`;
+    const url = new URL(`${BASE_URL}/lists/${listId}/tasks/${taskId}/move`);
+    if (parent) url.searchParams.append('parent', parent);
+    if (previous) url.searchParams.append('previous', previous);
     
-    const response = await this.fetchWithAuth(url, { method: 'POST' });
+    const response = await this.fetchWithAuth(url.toString(), { method: 'POST' });
     if (!response.ok) throw new Error('Failed to move task');
     return response.json();
   }

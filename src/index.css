@@ -7,7 +7,7 @@
     --theme-text: #ffffff;
     --theme-muted: rgba(255, 255, 255, 0.6);
     --theme-glass: rgba(255, 255, 255, 0.08);
-    --theme-bg: rgba(0, 0, 0, 0.4);
+    --theme-bg: rgba(0, 0, 0, 0.2); /* Reduced opacity */
     --theme-border: rgba(255, 255, 255, 0.12);
     --theme-hover: rgba(255, 255, 255, 0.15);
     --theme-bg-accent: #ffffff;
@@ -21,7 +21,7 @@
   }
   
   .light-mode {
-    --theme-bg: rgba(255, 255, 255, 0.15);
+    --theme-bg: rgba(255, 255, 255, 0.1); /* Very light for glass feel */
     --theme-text: #000000;
     --theme-muted: rgba(0, 0, 0, 0.55);
     --theme-glass: rgba(255, 255, 255, 0.35); /* Frosted Glass Look */
@@ -41,7 +41,16 @@
 
 
   body {
-    @apply bg-black text-theme-text font-sans antialiased overflow-hidden transition-colors duration-500;
+    @apply bg-transparent text-theme-text font-sans antialiased overflow-hidden transition-colors duration-500;
+    color-scheme: dark;
+  }
+
+  .light-mode {
+    color-scheme: light;
+  }
+
+  input, textarea, select {
+    color-scheme: inherit;
   }
 }
 
