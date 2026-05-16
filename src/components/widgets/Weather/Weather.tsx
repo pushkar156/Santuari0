@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
 import { useViewStore } from '../../../store/viewStore';
 import { MapPin, CloudRain, Settings as SettingsIcon, Sun, Moon, Cloud, CloudDrizzle, CloudLightning, CloudSnow, Wind } from 'lucide-react';
-import { WidgetContainer } from '../../layout/WidgetContainer';
 
 interface WeatherData {
   main: {
@@ -56,31 +55,31 @@ export const Weather: React.FC = () => {
   const getWeatherIcon = (iconCode: string) => {
     const iconProps = { size: 48, className: "text-theme-text" };
     const iconMap: Record<string, React.ReactNode> = {
-      '01d': <Sun {...iconProps} className="text-yellow-400" />,
-      '01n': <Moon {...iconProps} className="text-blue-200" />,
-      '02d': <Cloud {...iconProps} className="text-gray-300" />,
-      '02n': <Cloud {...iconProps} className="text-gray-400" />,
-      '03d': <Cloud {...iconProps} className="text-gray-300" />,
-      '03n': <Cloud {...iconProps} className="text-gray-400" />,
-      '04d': <Cloud {...iconProps} className="text-gray-500" />,
-      '04n': <Cloud {...iconProps} className="text-gray-600" />,
-      '09d': <CloudDrizzle {...iconProps} className="text-blue-400" />,
-      '09n': <CloudDrizzle {...iconProps} className="text-blue-600" />,
-      '10d': <CloudRain {...iconProps} className="text-blue-500" />,
-      '10n': <CloudRain {...iconProps} className="text-blue-700" />,
-      '11d': <CloudLightning {...iconProps} className="text-yellow-500" />,
-      '11n': <CloudLightning {...iconProps} className="text-yellow-700" />,
-      '13d': <CloudSnow {...iconProps} className="text-blue-100" />,
-      '13n': <CloudSnow {...iconProps} className="text-blue-200" />,
-      '50d': <Wind {...iconProps} className="text-gray-400" />,
-      '50n': <Wind {...iconProps} className="text-gray-500" />,
+      '01d': <Sun {...iconProps} />,
+      '01n': <Moon {...iconProps} />,
+      '02d': <Cloud {...iconProps} />,
+      '02n': <Cloud {...iconProps} />,
+      '03d': <Cloud {...iconProps} />,
+      '03n': <Cloud {...iconProps} />,
+      '04d': <Cloud {...iconProps} />,
+      '04n': <Cloud {...iconProps} />,
+      '09d': <CloudDrizzle {...iconProps} />,
+      '09n': <CloudDrizzle {...iconProps} />,
+      '10d': <CloudRain {...iconProps} />,
+      '10n': <CloudRain {...iconProps} />,
+      '11d': <CloudLightning {...iconProps} />,
+      '11n': <CloudLightning {...iconProps} />,
+      '13d': <CloudSnow {...iconProps} />,
+      '13n': <CloudSnow {...iconProps} />,
+      '50d': <Wind {...iconProps} />,
+      '50n': <Wind {...iconProps} />,
     };
     return iconMap[iconCode] || <Sun {...iconProps} />;
   };
 
   if (!weatherConnected || !apiKey || !city) {
     return (
-      <WidgetContainer className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+      <div className="theme-glass w-full h-full min-h-[180px] flex flex-col items-center justify-center p-8 text-center">
         <CloudRain size={32} className="text-theme-muted mb-4" />
         <h3 className="text-lg font-bold text-theme-text mb-2">Weather Not Connected</h3>
         <p className="text-sm text-theme-muted mb-6 leading-relaxed">
@@ -92,12 +91,12 @@ export const Weather: React.FC = () => {
         >
           <SettingsIcon size={16} /> Go to Settings
         </button>
-      </WidgetContainer>
+      </div>
     );
   }
 
   return (
-    <WidgetContainer className="w-full h-full relative overflow-hidden flex flex-col justify-between">
+    <div className="theme-glass w-full h-full min-h-[180px] relative overflow-hidden flex flex-col justify-between p-8">
       {loading ? (
         <div className="flex items-center justify-center h-full min-h-[120px]">
           <div className="animate-pulse text-theme-muted font-medium tracking-widest uppercase text-xs">Fetching Radar...</div>
@@ -136,6 +135,6 @@ export const Weather: React.FC = () => {
           </div>
         </div>
       ) : null}
-    </WidgetContainer>
+    </div>
   );
 };

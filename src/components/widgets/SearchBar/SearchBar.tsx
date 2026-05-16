@@ -4,12 +4,10 @@ import { Search } from 'lucide-react';
 
 export const SearchBar: React.FC = () => {
   const [query, setQuery] = useState('');
-  const { settings, updateSearchEngine, theme } = useWidgetStore();
+  const { settings, updateSearchEngine } = useWidgetStore();
   const defaultEngine = settings.search.defaultEngine;
 
-  const themeClass = theme === 'glass' 
-    ? 'bg-theme-glass backdrop-blur-md border border-theme-border' 
-    : 'bg-theme-glass border border-transparent focus:bg-theme-hover';
+  const themeClass = 'bg-theme-glass backdrop-blur-md border border-theme-border';
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

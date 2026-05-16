@@ -28,6 +28,7 @@ interface TasksState {
   visibleListIds: string[];
   showTodayColumn: boolean;
   showStarredColumn: boolean;
+  listOrder: string[]; // Manual order of list IDs
 
   // Actions
   setAuthenticated: (status: boolean) => void;
@@ -49,6 +50,7 @@ interface TasksState {
   toggleListVisibility: (listId: string) => void;
   setShowTodayColumn: (show: boolean) => void;
   setShowStarredColumn: (show: boolean) => void;
+  setListOrder: (ids: string[]) => void;
   sync: (interactive?: boolean) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<GoogleTask>) => Promise<void>;
   logout: () => Promise<void>;
@@ -76,6 +78,7 @@ export const useTasksStore = create<TasksState>()(
       visibleListIds: [],
       showTodayColumn: true,
       showStarredColumn: false,
+      listOrder: [],
 
       setAuthenticated: (status) => set({ isAuthenticated: status }),
 
@@ -90,6 +93,9 @@ export const useTasksStore = create<TasksState>()(
               lists,
               isAuthenticated: true,
               visibleListIds: [...state.visibleListIds, ...newIds],
+              listOrder: state.listOrder.length > 0 
+                ? [...state.listOrder, ...lists.map(l => l.id).filter(id => !state.listOrder.includes(id))]
+                : lists.map(l => l.id),
               activeListId: state.activeListId || (lists.length > 0 ? lists[0].id : null),
             };
           });
@@ -388,6 +394,7 @@ export const useTasksStore = create<TasksState>()(
 
       setShowTodayColumn: (show) => set({ showTodayColumn: show }),
       setShowStarredColumn: (show) => set({ showStarredColumn: show }),
+      setListOrder: (ids) => set({ listOrder: ids }),
 
       sync: async (interactive = true) => {
         await get().fetchLists(interactive);

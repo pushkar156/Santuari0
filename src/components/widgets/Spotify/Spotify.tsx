@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWidgetStore } from '../../../store/widgetStore';
 import { SpotifyService } from '../../../lib/spotify';
-import { WidgetContainer } from '../../layout/WidgetContainer';
 import { useViewStore } from '../../../store/viewStore';
 import { Play, Pause, SkipBack, SkipForward, Music, Settings as SettingsIcon } from 'lucide-react';
 import { useSpotify } from '../../../hooks/useSpotify';
@@ -83,7 +82,7 @@ export const Spotify: React.FC = () => {
 
   if (!spotifyToken) {
     return (
-      <WidgetContainer className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+      <div className="theme-glass w-full h-full min-h-[180px] flex flex-col items-center justify-center p-8 text-center">
         <Music size={32} className="text-theme-muted mb-4" />
         <h3 className="text-lg font-bold text-theme-text mb-2">Spotify Not Connected</h3>
         <p className="text-sm text-theme-muted mb-6 leading-relaxed">
@@ -95,13 +94,13 @@ export const Spotify: React.FC = () => {
         >
           <SettingsIcon size={16} /> Go to Settings
         </button>
-      </WidgetContainer>
+      </div>
     );
   }
 
   if (!spotifyTrack) {
     return (
-      <WidgetContainer className="flex flex-col items-center justify-center p-8 space-y-4">
+      <div className="theme-glass flex flex-col items-center justify-center p-8 space-y-4 min-h-[180px]">
         <Music size={40} className="text-theme-muted animate-pulse" />
         <p className="text-sm text-theme-muted">No active session</p>
         <button 
@@ -113,13 +112,13 @@ export const Spotify: React.FC = () => {
         >
           Refresh State
         </button>
-      </WidgetContainer>
+      </div>
     );
   }
 
   if (!spotifyTrack.isPlaying && spotifyTrack.uri) {
     return (
-      <WidgetContainer className="group relative overflow-hidden p-0 min-h-[140px] flex flex-col">
+      <div className="theme-glass group relative overflow-hidden p-0 min-h-[180px] flex flex-col">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20 blur-2xl scale-110"
           style={{ backgroundImage: `url(${spotifyTrack.albumArt})` }}
@@ -143,14 +142,14 @@ export const Spotify: React.FC = () => {
             Play on this Device
           </button>
         </div>
-      </WidgetContainer>
+      </div>
     );
   }
 
   const progressPercent = (localProgress / spotifyTrack.duration_ms) * 100;
 
   return (
-    <WidgetContainer className="group relative overflow-hidden p-0 min-h-[140px] flex flex-col">
+    <div className="theme-glass group relative overflow-hidden p-0 min-h-[180px] flex flex-col">
       {/* Background Album Art Blur */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-20 blur-2xl scale-110"
@@ -232,6 +231,6 @@ export const Spotify: React.FC = () => {
           />
         </div>
       </div>
-    </WidgetContainer>
+    </div>
   );
 };

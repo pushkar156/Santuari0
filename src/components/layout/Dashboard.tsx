@@ -56,7 +56,7 @@ export const Dashboard = () => {
               
               {/* Left Column (Weather & Spotify) */}
               <div className="col-span-12 md:col-span-3 flex flex-col justify-center space-y-12 h-full">
-                <div className={`w-full max-w-[280px] transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
+                <div className={`w-full max-w-[320px] transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
                   <Weather />
                 </div>
 

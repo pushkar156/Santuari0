@@ -125,7 +125,7 @@ export const CalendarView: React.FC = () => {
   }, [currentDate]);
 
   const handlePrev = () => {
-    setCurrentDate(prev => {
+    setCurrentDate((prev: Date) => {
       if (viewType === 'month') return subMonths(prev, 1);
       if (viewType === 'week') return addDays(prev, -7);
       return addDays(prev, -1);
@@ -133,7 +133,7 @@ export const CalendarView: React.FC = () => {
   };
 
   const handleNext = () => {
-    setCurrentDate(prev => {
+    setCurrentDate((prev: Date) => {
       if (viewType === 'month') return addMonths(prev, 1);
       if (viewType === 'week') return addDays(prev, 7);
       return addDays(prev, 1);
@@ -599,7 +599,7 @@ const MiniCalendar = ({ currentDate, onDateSelect }: { currentDate: Date, onDate
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
           <div key={i} className="text-[9px] font-black text-theme-muted/40 text-center h-6 flex items-center justify-center uppercase tracking-widest">{d}</div>
         ))}
-        {days.map((day, i) => {
+        {days.map((day: Date, i: number) => {
           const isSelected = isSameDay(day, currentDate);
           const isCurrentMonth = isSameMonth(day, monthStart);
           const isCurrentDay = isToday(day);

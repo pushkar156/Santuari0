@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, ListTodo,
-  RefreshCw, LogOut, Loader2, Menu,
+  RefreshCw, Loader2, Menu,
   StickyNote, Star, ChevronRight, ChevronDown, X,
-  MoreVertical, Edit2, Check, LayoutGrid, Settings as SettingsIcon,
+  MoreVertical, Edit2, Check, LayoutGrid,
   Clock, CheckCheck
 } from 'lucide-react';
 import { useViewStore } from '../../store/viewStore';
@@ -12,14 +12,15 @@ import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent
 } from '@dnd-kit/core';
-import {
-  SortableContext, sortableKeyboardCoordinates,
-  verticalListSortingStrategy, useSortable
+import { GoogleTask, GoogleTaskList } from '../../services/googleTasks';
+import { 
+  SortableContext, 
+  verticalListSortingStrategy, 
+  useSortable,
+  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTasksStore } from '../../store/tasksStore';
-import { useWidgetStore } from '../../store/widgetStore';
-import { GoogleTask } from '../../services/googleTasks';
 
 interface TaskNode extends GoogleTask { children: TaskNode[]; }
 
@@ -36,7 +37,7 @@ function buildTree(flat: GoogleTask[]): TaskNode[] {
 }
 
 // ─── Auth gate ───────────────────────────────────────────────────────────────
-const AuthGate: React.FC<{ onConnect: () => void; onLocal: () => void; onSettings: () => void }> = ({ onConnect, onLocal, onSettings }) => (
+const AuthGate: React.FC<{ onSettings: () => void }> = ({ onSettings }) => (
   <div className="h-screen w-full flex items-center justify-center p-6">
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
       className="theme-glass p-12 max-w-md w-full text-center space-y-8">
@@ -45,23 +46,13 @@ const AuthGate: React.FC<{ onConnect: () => void; onLocal: () => void; onSetting
       </div>
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-theme-text">Tasks Workspace</h1>
-        <p className="text-theme-muted">Sync your Google Tasks or stay focused locally.</p>
+        <p className="text-theme-muted">Sync your Google Tasks to stay organized across all your devices.</p>
       </div>
       <div className="space-y-4 pt-4">
-        <button onClick={onConnect}
+        <button onClick={onSettings}
           className="w-full bg-theme-bg-accent text-theme-contrast py-4 rounded-2xl font-bold text-lg hover:scale-[1.02] transition-all shadow-xl flex items-center justify-center gap-3">
-          <RefreshCw size={20} /> Connect Google Tasks
+          <RefreshCw size={20} /> Connect Google
         </button>
-        <div className="grid grid-cols-2 gap-4">
-          <button onClick={onLocal}
-            className="w-full bg-theme-hover/50 text-theme-text py-4 rounded-xl font-bold text-sm hover:bg-theme-border transition-all flex items-center justify-center gap-2 border border-theme-border/50">
-            Use Local
-          </button>
-          <button onClick={onSettings}
-            className="w-full bg-theme-hover/50 text-theme-text py-4 rounded-xl font-bold text-sm hover:bg-theme-border transition-all flex items-center justify-center gap-2 border border-theme-border/50">
-            <SettingsIcon size={16} /> Settings
-          </button>
-        </div>
       </div>
     </motion.div>
   </div>
@@ -71,25 +62,22 @@ const AuthGate: React.FC<{ onConnect: () => void; onLocal: () => void; onSetting
 export const TasksView: React.FC = () => {
   const {
     lists, tasksByList, isLoading, isAuthenticated,
-    fetchLists, setActiveList, addTask, toggleTask, updateTaskDetail,
-    moveTask, removeTask, sync, logout, createList, updateList, deleteList,
-    clearCompleted, moveTaskToList,
+    fetchLists, setActiveList, addTask, toggleTask, updateTaskDetail: updateTask,
+    moveTask, removeTask: deleteTask, updateList, deleteList, createList,
+    clearCompleted,
     visibleListIds, toggleListVisibility,
     showTodayColumn, setShowTodayColumn,
     showStarredColumn, setShowStarredColumn,
+    listOrder, setListOrder
   } = useTasksStore();
-  const { todos: localTodos } = useWidgetStore();
   const { setActiveView } = useViewStore();
 
-  const [showLocal, setShowLocal] = useState(false);
+
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
-  const [editingListId, setEditingListId] = useState<string | null>(null);
-  const [editingListTitle, setEditingListTitle] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Initial Sync Logic
   useEffect(() => {
@@ -106,7 +94,7 @@ export const TasksView: React.FC = () => {
   }, [lists, isAuthenticated, tasksByList, setActiveList]);
 
   const allTasks = useMemo(() => Object.values(tasksByList).flat(), [tasksByList]);
-  const selectedTask = !showLocal && selectedTaskId ? allTasks.find(t => t.id === selectedTaskId) : null;
+  const selectedTask = selectedTaskId ? allTasks.find(t => t.id === selectedTaskId) : null;
   // Find which list the selected task lives in
   const selectedTaskListId = selectedTask
     ? Object.entries(tasksByList).find(([, tasks]) => tasks.some(t => t.id === selectedTask.id))?.[0] ?? null
@@ -134,6 +122,8 @@ export const TasksView: React.FC = () => {
     moveTask(listId, task.id, target.id);
   };
 
+
+
   const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newListTitle.trim()) {
@@ -143,16 +133,8 @@ export const TasksView: React.FC = () => {
     }
   };
 
-  const handleRenameList = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingListId && editingListTitle.trim()) {
-      await updateList(editingListId, editingListTitle.trim());
-      setEditingListId(null);
-    }
-  };
-
-  if (!isAuthenticated && !showLocal) {
-    return <AuthGate onConnect={() => sync()} onLocal={() => setShowLocal(true)} onSettings={() => setActiveView('settings')} />;
+  if (!isAuthenticated) {
+    return <AuthGate onSettings={() => setActiveView('settings')} />;
   }
 
   const starredTasks = allTasks.filter((t: GoogleTask) => t.starred && t.status !== 'completed');
@@ -163,19 +145,12 @@ export const TasksView: React.FC = () => {
     return t.due.split('T')[0] <= todayStr;
   });
 
-  // Combine Google and Local tasks for columns if needed, or handle showLocal separately
-  const displayLists = showLocal ? [{ id: 'local', title: 'Local Tasks' }] : lists;
-  const displayTasksByList = showLocal ? { 'local': localTodos.map(t => ({ id: t.id, title: t.text, status: t.completed ? 'completed' : 'needsAction', starred: false, notes: '', updated: '', selfLink: '', parent: undefined, position: '', due: undefined } as GoogleTask)) } : tasksByList;
-
+  const displayLists = lists;
+  const displayTasksByList = tasksByList as Record<string, GoogleTask[]>;
 
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-theme-bg/20">
-      {/* Sidebar - Strategy #5: Pill Headers for Lists */}
-      <motion.aside
-        initial={false}
-        animate={{ width: sidebarOpen ? 320 : 0, opacity: sidebarOpen ? 1 : 0 }}
-        className="flex-shrink-0 border-r border-theme-border/30 bg-theme-bg/10 backdrop-blur-3xl overflow-hidden flex flex-col"
-      >
+    <div className="h-screen w-full bg-transparent flex overflow-hidden relative">
+      <aside className={`flex-shrink-0 bg-theme-bg/10 backdrop-blur-3xl border-r border-theme-border transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col overflow-hidden z-20 ${sidebarOpen ? 'w-[320px]' : 'w-0'}`}>
         <div className="p-8 flex flex-col h-full gap-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xs font-black text-theme-muted uppercase tracking-[0.2em] flex items-center gap-2">
@@ -187,24 +162,29 @@ export const TasksView: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-2">
-            {/* Special Views */}
             <div className="space-y-1 mb-6">
               <button
                 onClick={() => setShowTodayColumn(!showTodayColumn)}
-                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[18px] transition-all group ${showTodayColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-[18px] transition-all group ${showTodayColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Clock size={18} className={showTodayColumn ? 'text-theme-bg-accent' : 'text-theme-muted'} />
+                  <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${showTodayColumn ? 'bg-theme-bg-accent border-theme-bg-accent' : 'border-theme-border'}`}>
+                    {showTodayColumn && <Check size={12} className="text-theme-contrast" />}
+                  </div>
+                  <Clock size={16} className={showTodayColumn ? 'text-theme-bg-accent' : 'text-theme-muted'} />
                   <span className="text-sm font-bold">My Day</span>
                 </div>
                 <span className="text-[10px] font-black opacity-40">{todayTasks.length}</span>
               </button>
               <button
                 onClick={() => setShowStarredColumn(!showStarredColumn)}
-                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[18px] transition-all group ${showStarredColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-[18px] transition-all group ${showStarredColumn ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Star size={18} className={showStarredColumn ? 'text-theme-bg-accent' : 'text-theme-muted'} />
+                  <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${showStarredColumn ? 'bg-theme-bg-accent border-theme-bg-accent' : 'border-theme-border'}`}>
+                    {showStarredColumn && <Check size={12} className="text-theme-contrast" />}
+                  </div>
+                  <Star size={16} className={showStarredColumn ? 'text-theme-bg-accent' : 'text-theme-muted'} />
                   <span className="text-sm font-bold">Starred</span>
                 </div>
                 <span className="text-[10px] font-black opacity-40">{starredTasks.length}</span>
@@ -212,99 +192,70 @@ export const TasksView: React.FC = () => {
             </div>
 
             <p className="text-[10px] font-black text-theme-muted uppercase tracking-widest px-4 mb-3">Lists</p>
-            {displayLists.map(list => (
-              <div key={list.id} className="group flex items-center">
-                <button
-                  onClick={() => toggleListVisibility(list.id)}
-                  className={`flex-1 flex items-center justify-between px-4 py-3 rounded-[18px] transition-all ${visibleListIds.includes(list.id) ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <ListTodo size={18} className={visibleListIds.includes(list.id) ? 'text-theme-bg-accent' : 'text-theme-muted'} />
-                    {editingListId === list.id ? (
-                      <form onSubmit={handleRenameList} className="flex-1">
-                        <input
-                          autoFocus
-                          value={editingListTitle}
-                          onChange={e => setEditingListTitle(e.target.value)}
-                          onBlur={handleRenameList}
-                          className="w-full bg-transparent outline-none border-b border-theme-bg-accent/50 text-sm font-bold"
-                        />
-                      </form>
-                    ) : (
-                      <span className="text-sm font-bold truncate">{list.title}</span>
-                    )}
-                  </div>
-                </button>
-                <div className="opacity-0 group-hover:opacity-100 flex gap-1 pr-2">
-                  <button onClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-muted hover:text-theme-bg-accent transition-all">
-                    <Edit2 size={12} />
-                  </button>
-                  <button onClick={() => { if (confirm('Delete this list?')) deleteList(list.id); }} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-muted hover:text-red-400 transition-all">
-                    <Trash2 size={12} />
-                  </button>
+            <DndContext 
+              sensors={sensors} 
+              collisionDetection={closestCenter} 
+              onDragEnd={(e) => {
+                const { active, over } = e;
+                if (over && active.id !== over.id) {
+                  const oldIndex = listOrder.indexOf(active.id as string);
+                  const newIndex = listOrder.indexOf(over.id as string);
+                  const newOrder = [...listOrder];
+                  newOrder.splice(oldIndex, 1);
+                  newOrder.splice(newIndex, 0, active.id as string);
+                  setListOrder(newOrder);
+                }
+              }}
+            >
+              <SortableContext items={listOrder} strategy={verticalListSortingStrategy}>
+                <div className="space-y-1">
+                  {listOrder.map(listId => {
+                    const list = lists.find(l => l.id === listId);
+                    if (!list) return null;
+                    return (
+                      <SidebarListItem 
+                        key={list.id}
+                        list={list}
+                        isVisible={visibleListIds.includes(list.id)}
+                        onToggle={() => toggleListVisibility(list.id)}
+                        onRename={(t) => updateList(list.id, t)}
+                        onDelete={() => deleteList(list.id)}
+                      />
+                    );
+                  })}
                 </div>
-              </div>
-            ))}
+              </SortableContext>
+            </DndContext>
 
             {isCreatingList && (
-              <form onSubmit={handleCreateList} className="px-4 py-2">
+              <form onSubmit={handleCreateList} className="mt-2 px-2">
                 <input
                   autoFocus
                   placeholder="New list title..."
                   value={newListTitle}
                   onChange={e => setNewListTitle(e.target.value)}
                   onBlur={() => !newListTitle && setIsCreatingList(false)}
-                  className="w-full bg-theme-bg-accent/5 border border-theme-bg-accent/30 rounded-xl px-4 py-3 text-sm font-bold text-theme-text outline-none focus:ring-1 focus:ring-theme-bg-accent/50"
+                  className="w-full bg-theme-bg-accent/5 border border-theme-bg-accent/30 rounded-xl px-4 py-2.5 text-sm font-bold text-theme-text outline-none focus:ring-1 focus:ring-theme-bg-accent/50"
                 />
               </form>
             )}
           </div>
-
-          <div className="mt-auto pt-6 border-t border-theme-border/20">
-            <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-400 hover:bg-red-400/10 transition-all group">
-              <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-              <span className="text-sm font-bold">Sign Out</span>
-            </button>
-          </div>
         </div>
-      </motion.aside>
+      </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-theme-bg/10 overflow-hidden relative">
-        {/* Top Navbar */}
+      <main className="flex-1 flex flex-col min-w-0 bg-transparent overflow-hidden relative">
         <header className="flex-shrink-0 h-24 flex items-center justify-between px-10 border-b border-theme-border/20 backdrop-blur-md">
           <div className="flex items-center gap-6">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-theme-bg-accent/5 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-bg-accent transition-all">
               <Menu size={20} />
             </button>
-            <div>
-              <h1 className="text-2xl font-black text-theme-text tracking-tight flex items-center gap-3">
-                Santuario Tasks
-                {isLoading && <Loader2 size={18} className="animate-spin text-theme-bg-accent" />}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted group-focus-within:text-theme-bg-accent transition-colors">
-                <LayoutGrid size={18} />
-              </div>
-              <input
-                type="text"
-                placeholder="Search everywhere..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="bg-theme-bg-accent/5 border border-theme-border/30 rounded-[22px] py-3 pl-12 pr-6 text-sm font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 w-72 transition-all"
-              />
-            </div>
-            <button onClick={() => sync()} className="p-3 bg-theme-bg-accent/5 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-bg-accent transition-all">
-              <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-            </button>
+            <h1 className="text-2xl font-black text-theme-text tracking-tight flex items-center gap-3">
+              Santuario Tasks
+              {isLoading && <Loader2 size={18} className="animate-spin text-theme-bg-accent" />}
+            </h1>
           </div>
         </header>
 
-        {/* Dynamic Column Flow */}
         <div className="flex-1 overflow-x-auto custom-scrollbar flex p-8 gap-8 items-start">
           <AnimatePresence mode="popLayout">
             {showTodayColumn && (
@@ -319,8 +270,8 @@ export const TasksView: React.FC = () => {
                 setFocusedTaskId={setFocusedTaskId}
                 onSelect={setSelectedTaskId}
                 onToggle={toggleTask}
-                onRemove={removeTask}
-                onUpdate={updateTaskDetail}
+                onRemove={deleteTask}
+                onUpdate={updateTask}
                 onDragEnd={handleDragEnd}
                 onAddTask={(text) => addTask(text, displayLists[0]?.id)}
                 onMoveTask={moveTask}
@@ -341,8 +292,8 @@ export const TasksView: React.FC = () => {
                 setFocusedTaskId={setFocusedTaskId}
                 onSelect={setSelectedTaskId}
                 onToggle={toggleTask}
-                onRemove={removeTask}
-                onUpdate={updateTaskDetail}
+                onRemove={deleteTask}
+                onUpdate={updateTask}
                 onDragEnd={handleDragEnd}
                 onAddTask={(text) => addTask(text, displayLists[0]?.id)}
                 onMoveTask={moveTask}
@@ -351,7 +302,7 @@ export const TasksView: React.FC = () => {
                 onDeleteList={() => setShowStarredColumn(false)}
               />
             )}
-            {(showLocal ? ['local'] : visibleListIds).map(listId => {
+            {visibleListIds.map(listId => {
               const list = displayLists.find(l => l.id === listId);
               if (!list) return null;
               return (
@@ -366,8 +317,8 @@ export const TasksView: React.FC = () => {
                   setFocusedTaskId={setFocusedTaskId}
                   onSelect={setSelectedTaskId}
                   onToggle={toggleTask}
-                  onRemove={removeTask}
-                  onUpdate={updateTaskDetail}
+                  onRemove={deleteTask}
+                  onUpdate={updateTask}
                   onDragEnd={handleDragEnd}
                   onAddTask={(text) => addTask(text, listId)}
                   onClearCompleted={() => clearCompleted(listId)}
@@ -378,102 +329,152 @@ export const TasksView: React.FC = () => {
               );
             })}
           </AnimatePresence>
+        </div>
 
-          {/* Details Pane */}
-          <AnimatePresence>
-            {selectedTask && (
-              <motion.aside
-                key="details"
-                initial={{ x: 400, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 400, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-                className="w-[420px] flex-shrink-0 border-l border-theme-border bg-theme-glass backdrop-blur-2xl flex flex-col p-8 gap-6 overflow-y-auto custom-scrollbar shadow-2xl z-20"
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-theme-bg-accent/10 rounded-lg flex items-center justify-center text-theme-bg-accent">
-                      <Edit2 size={16} />
+        {/* Details Pane - Strategy: Overlay from right */}
+        <AnimatePresence>
+          {selectedTask && (
+            <motion.aside
+              initial={{ x: 420, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 420, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-[420px] bg-theme-bg/80 backdrop-blur-3xl border-l border-theme-border flex flex-col shadow-[-20px_0_60px_rgba(0,0,0,0.5)] z-[100] overflow-y-auto custom-scrollbar"
+            >
+              <div className="p-8 flex flex-col gap-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-theme-bg-accent/10 flex items-center justify-center">
+                      <StickyNote size={18} className="text-theme-bg-accent" />
                     </div>
-                    <span className="text-xs font-black text-theme-muted uppercase tracking-[0.2em]">Edit Task</span>
+                    <h2 className="text-xl font-black text-theme-text tracking-tight">Task Details</h2>
                   </div>
-                  <button onClick={() => setSelectedTaskId(null)} className="p-2 hover:bg-theme-bg-accent/10 rounded-xl text-theme-muted transition-all">
+                  <button onClick={() => setSelectedTaskId(null)} className="p-2 hover:bg-theme-hover rounded-xl text-theme-muted hover:text-theme-text transition-all">
                     <X size={20} />
                   </button>
                 </div>
 
-                <div className="space-y-8">
-                  {/* Title & Notes Area */}
-                  <div className="space-y-6 bg-theme-bg-accent/5 p-6 rounded-3xl border border-theme-border/20">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-theme-muted uppercase tracking-widest ml-1">Title</label>
-                      <textarea
-                        value={selectedTask.title}
-                        onChange={e => updateTaskDetail(selectedTask.id, { title: e.target.value })}
-                        className="w-full bg-transparent text-xl font-bold text-theme-text outline-none resize-none placeholder-theme-muted/30"
-                        rows={2}
-                      />
-                    </div>
-                    <div className="space-y-2 border-t border-theme-border/20 pt-6">
-                      <label className="text-[10px] font-black text-theme-muted uppercase tracking-widest ml-1">Description</label>
-                      <textarea
-                        value={selectedTask.notes || ''}
-                        onChange={e => updateTaskDetail(selectedTask.id, { notes: e.target.value })}
-                        placeholder="Add some details..."
-                        className="w-full bg-transparent text-[14px] font-medium leading-relaxed text-theme-text/80 outline-none resize-none min-h-[120px] placeholder-theme-muted/30"
-                      />
-                    </div>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-theme-muted ml-1">Title</label>
+                    <textarea
+                      value={selectedTask.title}
+                      onChange={e => updateTask(selectedTask.id, { title: e.target.value })}
+                      className="w-full bg-theme-bg-accent/5 border border-theme-border/50 rounded-2xl px-5 py-4 text-theme-text font-bold text-lg focus:outline-none focus:ring-1 focus:ring-theme-bg-accent transition-all resize-none"
+                      rows={2}
+                    />
                   </div>
 
-                  {/* Metadata Grid */}
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="group relative">
-                      <label className="absolute left-4 top-2.5 text-[9px] font-black text-theme-muted uppercase tracking-widest transition-all group-focus-within:text-theme-bg-accent">Due Date</label>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-theme-muted ml-1">Notes</label>
+                    <textarea
+                      placeholder="Add some details..."
+                      value={selectedTask.notes || ''}
+                      onChange={e => updateTask(selectedTask.id, { notes: e.target.value })}
+                      className="w-full bg-theme-bg-accent/5 border border-theme-border/50 rounded-2xl px-5 py-4 text-theme-text text-sm min-h-[160px] focus:outline-none focus:ring-1 focus:ring-theme-bg-accent transition-all resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-theme-muted ml-1">Deadline</label>
                       <input
                         type="date"
                         value={selectedTask.due ? selectedTask.due.split('T')[0] : ''}
-                        onChange={e => updateTaskDetail(selectedTask.id, { due: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                        className="w-full bg-theme-bg-accent/5 border border-theme-border/20 rounded-2xl pt-7 pb-3.5 px-4 text-[13px] font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 transition-all"
+                        onChange={e => updateTask(selectedTask.id, { due: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                        className="w-full bg-theme-bg-accent/5 border border-theme-border/50 rounded-2xl px-5 py-4 text-theme-text text-sm focus:outline-none focus:ring-1 focus:ring-theme-bg-accent transition-all"
                       />
                     </div>
-
-                    <div className="group relative">
-                      <label className="absolute left-4 top-2.5 text-[9px] font-black text-theme-muted uppercase tracking-widest transition-all">Move to List</label>
-                      <select
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-theme-muted ml-1">List</label>
+                      <select 
                         value={selectedTaskListId || ''}
-                        onChange={e => {
-                          const targetListId = e.target.value;
-                          if (targetListId && targetListId !== selectedTaskListId) {
-                            moveTaskToList(selectedTask.id, targetListId);
-                          }
-                        }}
-                        className="w-full bg-theme-bg-accent/5 border border-theme-border/20 rounded-2xl pt-7 pb-3.5 px-4 text-[13px] font-bold text-theme-text outline-none focus:ring-2 focus:ring-theme-bg-accent/20 transition-all appearance-none cursor-pointer"
+                        onChange={e => moveTask(selectedTask.id, e.target.value)}
+                        className="w-full bg-theme-bg-accent/5 border border-theme-border/50 rounded-2xl px-5 py-4 text-theme-text text-sm focus:outline-none focus:ring-1 focus:ring-theme-bg-accent transition-all appearance-none"
                       >
-                        {lists.map(l => (
-                          <option key={l.id} value={l.id} className="bg-theme-contrast text-theme-text font-bold">{l.title}</option>
-                        ))}
+                        {lists.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
                       </select>
-                      <ChevronDown size={14} className="absolute right-4 top-1/2 translate-y-1 text-theme-muted pointer-events-none" />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-auto pt-8 border-t border-theme-border/20 flex justify-between items-center">
-                  <button onClick={() => { if (confirm('Delete this task?')) { removeTask(selectedTask.id); setSelectedTaskId(null); } }} className="flex items-center gap-2 text-red-400 hover:text-red-500 font-black text-[10px] uppercase tracking-widest transition-all">
-                    <Trash2 size={14} /> Delete Task
-                  </button>
-                  <button 
-                    onClick={() => updateTaskDetail(selectedTask.id, { starred: !selectedTask.starred })}
-                    className={`p-3 rounded-2xl transition-all ${selectedTask.starred ? 'bg-amber-400/20 text-amber-500' : 'bg-theme-bg-accent/5 text-theme-muted hover:text-theme-bg-accent'}`}
+                <div className="pt-8 mt-8 border-t border-theme-border/50 flex justify-end">
+                  <button
+                    onClick={() => { if(confirm('Delete this task?')) { deleteTask(selectedTask.id); setSelectedTaskId(null); } }}
+                    className="flex items-center gap-2 px-6 py-3 bg-red-400/5 hover:bg-red-400/10 text-red-500 rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
                   >
-                    <Star size={20} fill={selectedTask.starred ? 'currentColor' : 'none'} />
+                    <Trash2 size={16} /> Delete Task
                   </button>
                 </div>
-              </motion.aside>
-            )}
-          </AnimatePresence>
-        </div>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </main>
+    </div>
+  );
+};
+
+const SidebarListItem: React.FC<{
+  list: GoogleTaskList;
+  isVisible: boolean;
+  onToggle: () => void;
+  onRename: (title: string) => void;
+  onDelete: () => void;
+}> = ({ list, isVisible, onToggle, onRename, onDelete }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(list.title);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: list.id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    position: 'relative' as const,
+  };
+
+  const handleRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editTitle.trim() && editTitle !== list.title) onRename(editTitle.trim());
+    setIsEditing(false);
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="group flex items-center pr-2">
+      <div {...attributes} {...listeners} className="p-2 cursor-grab active:cursor-grabbing text-theme-muted opacity-0 group-hover:opacity-100 transition-all">
+        <Menu size={12} className="rotate-90" />
+      </div>
+      <button
+        onClick={onToggle}
+        className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-[18px] transition-all ${isVisible ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+      >
+        <div className="flex items-center gap-3 truncate">
+          <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isVisible ? 'bg-theme-bg-accent border-theme-bg-accent' : 'border-theme-border'}`}>
+            {isVisible && <Check size={12} className="text-theme-contrast" />}
+          </div>
+          {isEditing ? (
+            <form onSubmit={handleRename} className="flex-1">
+              <input
+                autoFocus
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                onBlur={handleRename}
+                className="w-full bg-transparent outline-none border-b border-theme-bg-accent/50 text-sm font-bold"
+              />
+            </form>
+          ) : (
+            <span className="text-sm font-bold truncate">{list.title}</span>
+          )}
+        </div>
+      </button>
+      <div className="opacity-0 group-hover:opacity-100 flex gap-1 ml-1">
+        <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-muted hover:text-theme-bg-accent transition-all">
+          <Edit2 size={12} />
+        </button>
+        <button onClick={() => { if (confirm('Delete this list?')) onDelete(); }} className="p-1.5 hover:bg-theme-bg-accent/10 rounded-lg text-theme-muted hover:text-red-400 transition-all">
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 };
@@ -547,7 +548,6 @@ const TaskColumn: React.FC<{
 
   return (
     <div className="w-[360px] flex-shrink-0 flex flex-col h-full bg-theme-bg/40 backdrop-blur-xl rounded-[40px] overflow-hidden border border-theme-border/50 shadow-2xl shadow-black/5 group/column transition-all duration-500 hover:bg-theme-bg/60 hover:shadow-theme-bg-accent/5">
-      {/* Column header */}
       <div className="flex-shrink-0 flex items-center justify-between px-8 py-7 bg-gradient-to-b from-theme-bg-accent/5 to-transparent">
         <div className="flex-1 min-w-0 mr-3">
           {isEditingTitle ? (
@@ -588,11 +588,9 @@ const TaskColumn: React.FC<{
                 transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                 className="absolute right-0 top-full mt-3 w-52 bg-theme-glass backdrop-blur-3xl border border-theme-border/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] z-[60] overflow-hidden"
               >
-                {/* Header */}
                 <div className="px-4 py-3 border-b border-theme-border/10 bg-theme-hover">
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">List Options</p>
                 </div>
-
                 {/* Sort Section */}
                 <div className="p-1.5 border-b border-theme-border/10">
                   <p className="px-3 py-1 text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Sort By</p>
@@ -655,7 +653,7 @@ const TaskColumn: React.FC<{
       </div>
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-6 space-y-2">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-6 space-y-1">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => onDragEnd(e, listId)}>
           <SortableContext items={visibleTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
             <AnimatePresence mode="popLayout" initial={false}>
@@ -835,7 +833,7 @@ const TaskItem: React.FC<{
         layout
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`relative flex items-start gap-4 px-5 py-4 rounded-[22px] border transition-all cursor-pointer ${
+        className={`relative flex items-start gap-3 px-4 py-2.5 rounded-[22px] border transition-all cursor-pointer ${
           isCompleted ? 'bg-theme-bg/5 border-transparent opacity-60' :
           isSelected ? 'bg-white/70 dark:bg-white/10 border-theme-bg-accent/20 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] scale-[1.01] z-10' :
           'bg-transparent border-transparent hover:bg-theme-bg-accent/[0.03]'
@@ -872,7 +870,7 @@ const TaskItem: React.FC<{
             onFocus={() => setFocusedTaskId(task.id)}
             rows={1}
             placeholder="New task"
-            className={`w-full bg-transparent border-none outline-none resize-none p-0 text-[14px] font-semibold leading-[1.6] tracking-wide transition-all ${
+            className={`w-full bg-transparent border-none outline-none resize-none p-0 text-[14px] font-semibold leading-[1.6] tracking-wide transition-all overflow-hidden ${
               isCompleted ? 'line-through text-theme-muted/50' : 'text-theme-text'
             }`}
           />
