@@ -45,6 +45,6 @@ desktop.ini
 .env.test.local
 .env.production.local
 .eslintcache
-
+list.tldr
 # Project specific
 .planning/

@@ -15,6 +15,7 @@ import { CalendarView } from '../views/CalendarView';
 import { BookmarksView } from '../views/BookmarksView';
 import { DriveView } from '../views/DriveView';
 import { QuickLinks } from '../widgets/QuickLinks/QuickLinks';
+import { useWorkspaceSync } from '../../hooks/useWorkspaceSync';
 import { Bot } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
@@ -24,6 +25,9 @@ export const Dashboard = () => {
 
   // Initialize Spotify Polling
   useSpotify(true);
+
+  // Initialize Real-time Workspace Syncing
+  useWorkspaceSync();
   
   // Privacy Blur Shortcut (Alt + B)
   useEffect(() => {

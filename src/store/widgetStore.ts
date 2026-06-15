@@ -50,6 +50,12 @@ interface WidgetState {
   removeQuickLink: (id: string) => void;
   updateWeatherSettings: (settings: { apiKey?: string; city?: string }) => void;
   setCustomBackground: (background: string | null) => void;
+  bookmarksViewMode: 'grid' | 'list';
+  setBookmarksViewMode: (mode: 'grid' | 'list') => void;
+  bookmarkTabs: { id: string; name: string }[];
+  addBookmarkTab: (tab: { id: string; name: string }) => void;
+  renameBookmarkTab: (id: string, name: string) => void;
+  removeBookmarkTab: (id: string) => void;
   removeRecentBackground: (background: string) => void;
 }
 
@@ -71,6 +77,8 @@ export const useWidgetStore = create<WidgetState>()(
   persist(
     (set) => ({
       mode: 'dark',
+      bookmarksViewMode: 'grid',
+      bookmarkTabs: [{ id: '1', name: 'Home' }],
       settings: {
         search: {
           defaultEngine: 'google',
@@ -92,6 +100,14 @@ export const useWidgetStore = create<WidgetState>()(
       weatherConnected: false,
 
       setMode: (mode) => set({ mode }),
+      setBookmarksViewMode: (mode) => set({ bookmarksViewMode: mode }),
+      addBookmarkTab: (tab) => set((state) => ({ bookmarkTabs: [...state.bookmarkTabs, tab] })),
+      renameBookmarkTab: (id, name) => set((state) => ({
+        bookmarkTabs: state.bookmarkTabs.map(t => t.id === id ? { ...t, name } : t)
+      })),
+      removeBookmarkTab: (id) => set((state) => ({
+        bookmarkTabs: state.bookmarkTabs.filter(t => t.id !== id)
+      })),
 
       toggleBlur: () => set((state) => ({ isBlurred: !state.isBlurred })),
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Santuario",
-  "version": "2.8.0",
+  "version": "2.2.3",
   "description": "A fully custom privacy-focused new tab dashboard.",
   "chrome_url_overrides": {
     "newtab": "index.html"
@@ -11,7 +11,9 @@
     "identity",
     "unlimitedStorage",
     "bookmarks",
-    "favicon"
+    "favicon",
+    "tabs",
+    "tabGroups"
   ],
   "background": {
     "service_worker": "src/background.ts"
