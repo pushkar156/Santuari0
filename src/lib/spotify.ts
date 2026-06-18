@@ -2,7 +2,10 @@ const SPOTIFY_SCOPES = [
   'user-read-currently-playing',
   'user-read-playback-state',
   'user-modify-playback-state',
-  'user-read-recently-played'
+  'user-read-recently-played',
+  'playlist-read-private',
+  'playlist-read-collaborative',
+  'user-read-private'
 ];
 
 export class SpotifyService {
@@ -41,7 +44,7 @@ export class SpotifyService {
     await chrome.storage.local.set({ spotify_code_verifier: codeVerifier });
 
     const scope = SPOTIFY_SCOPES.join(' ');
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&code_challenge_method=S256&code_challenge=${codeChallenge}`;
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&code_challenge_method=S256&code_challenge=${codeChallenge}&show_dialog=true`;
 
     console.log('Redirect URI:', redirectUri);
 
@@ -248,5 +251,190 @@ export class SpotifyService {
         'Authorization': `Bearer ${token}`
       }
     });
+  }
+
+  static async getUserPlaylists(token: string) {
+    const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.status === 401) {
+      const err: any = new Error('Spotify token expired or invalid');
+      err.status = 401;
+      throw err;
+    }
+
+    if (response.status !== 200) {
+      const body = await response.text();
+      console.error(`Playlist fetch error: status ${response.status}`, body);
+      let errMsg = `Failed to load playlists: status ${response.status}`;
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed.error?.message) errMsg += ` (${parsed.error.message})`;
+      } catch (e) {}
+      throw new Error(errMsg);
+    }
+
+    const data = await response.json();
+    return data.items || [];
+  }
+
+  static async searchTracks(token: string, query: string) {
+    if (!query.trim()) return [];
+    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.status === 401) {
+      const err: any = new Error('Spotify token expired or invalid');
+      err.status = 401;
+      throw err;
+    }
+
+    if (response.status !== 200) {
+      const body = await response.text();
+      console.error(`Search error: status ${response.status}`, body);
+      let errMsg = `Search failed: status ${response.status}`;
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed.error?.message) errMsg += ` (${parsed.error.message})`;
+      } catch (e) {}
+      throw new Error(errMsg);
+    }
+
+    const data = await response.json();
+    return data.tracks?.items || [];
+  }
+
+  static async debugTokenScopes(token: string) {
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const profile = await response.json();
+      console.log('[Spotify Debug] Token profile response:', profile);
+      console.log('[Spotify Debug] Requested scopes at login:', [
+        'user-read-currently-playing',
+        'user-read-playback-state',
+        'user-modify-playback-state',
+        'user-read-recently-played',
+        'playlist-read-private',
+        'playlist-read-collaborative',
+        'user-read-private'
+      ].join(', '));
+      return profile;
+    } catch (e) {
+      console.error('[Spotify Debug] Failed to fetch profile:', e);
+      return null;
+    }
+  }
+
+  static async getPlaylistTracks(token: string, playlistId: string) {
+    const allItems: any[] = [];
+    let url: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50`;
+
+    while (url) {
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.status === 401) {
+        const err: any = new Error('Spotify token expired or invalid');
+        err.status = 401;
+        throw err;
+      }
+
+      if (response.status !== 200) {
+        const body = await response.text();
+        let errMsg = `Failed to load playlist songs: status ${response.status}`;
+        try {
+          const parsed = JSON.parse(body);
+          if (parsed.error?.message) errMsg += ` (${parsed.error.message})`;
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
+
+      const data = await response.json();
+      if (data.items) {
+        allItems.push(...data.items);
+      }
+      // Spotify returns 'next' URL for the next page, or null if done
+      url = data.next || null;
+    }
+
+    console.log(`Fetched ${allItems.length} total tracks from playlist ${playlistId}`);
+    return allItems;
+  }
+
+  static async play(token: string, options: { context_uri?: string; uris?: string[]; offset?: { uri: string }; position_ms?: number }, deviceId?: string) {
+    const url = new URL('https://api.spotify.com/v1/me/player/play');
+    if (deviceId) url.searchParams.set('device_id', deviceId);
+
+    const body: any = {};
+    if (options.context_uri) {
+      body.context_uri = options.context_uri;
+      if (options.offset) {
+        body.offset = options.offset;
+      }
+    } else if (options.uris) {
+      body.uris = options.uris;
+    }
+    if (options.position_ms !== undefined) {
+      body.position_ms = options.position_ms;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (response.status === 401) {
+      const err: any = new Error('Spotify token expired or invalid');
+      err.status = 401;
+      throw err;
+    }
+
+    if (response.status !== 204 && response.status !== 200) {
+      const txt = await response.text();
+      throw new Error(`Playback failed: status ${response.status}. ${txt}`);
+    }
+
+    return response.ok;
+  }
+
+  static async addToQueue(token: string, uri: string, deviceId?: string) {
+    const url = new URL('https://api.spotify.com/v1/me/player/queue');
+    url.searchParams.set('uri', uri);
+    if (deviceId) {
+      url.searchParams.set('device_id', deviceId);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.status === 401) {
+      const err: any = new Error('Spotify token expired or invalid');
+      err.status = 401;
+      throw err;
+    }
+
+    if (response.status !== 204 && response.status !== 202 && response.status !== 200) {
+      const txt = await response.text();
+      throw new Error(`Queue addition failed: status ${response.status}. ${txt}`);
+    }
+
+    return response.ok;
   }
 }
