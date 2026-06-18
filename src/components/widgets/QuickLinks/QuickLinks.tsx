@@ -8,6 +8,11 @@ export const QuickLinks: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [brokenFavicons, setBrokenFavicons] = useState<Record<string, boolean>>({});
+
+  const handleImageError = (id: string) => {
+    setBrokenFavicons(prev => ({ ...prev, [id]: true }));
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,17 +55,16 @@ export const QuickLinks: React.FC = () => {
               className="flex flex-col items-center justify-center w-28 h-28 rounded-[2.5rem] theme-glass border border-theme-border/10 hover:border-theme-border/30 hover:bg-theme-hover/20 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shadow-lg hover:shadow-2xl"
             >
               <div className="w-14 h-14 mb-3 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-inner">
-                <img 
-                  src={`https://s2.googleusercontent.com/s2/favicons?domain=${getHostname(link.url)}&sz=128`} 
-                  alt={link.title}
-                  className="w-8 h-8 object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
-                  onError={(e) => {
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `<span class="text-theme-text text-xl font-bold opacity-80">${link.title.charAt(0).toUpperCase()}</span>`;
-                    }
-                  }}
-                />
+                {brokenFavicons[link.id] ? (
+                  <span className="text-theme-text text-xl font-bold opacity-80">{link.title.charAt(0).toUpperCase()}</span>
+                ) : (
+                  <img 
+                    src={`https://s2.googleusercontent.com/s2/favicons?domain=${getHostname(link.url)}&sz=128`} 
+                    alt={link.title}
+                    className="w-8 h-8 object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
+                    onError={() => handleImageError(link.id)}
+                  />
+                )}
               </div>
               <span className="text-theme-text text-[9px] font-black uppercase tracking-[0.2em] truncate w-full text-center px-3 opacity-40 group-hover:opacity-100 transition-opacity duration-300">
                 {link.title}

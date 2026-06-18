@@ -5,6 +5,7 @@ import { Weather } from '../widgets/Weather';
 import { Settings } from './Settings';
 import { BackgroundSettings } from './BackgroundSettings';
 import { Spotify } from '../widgets/Spotify';
+import { Battery } from '../widgets/Battery';
 import { useSpotify } from '../../hooks/useSpotify';
 import { useWidgetStore } from '../../store/widgetStore';
 import { useViewStore, ViewType } from '../../store/viewStore';
@@ -58,8 +59,12 @@ export const Dashboard = () => {
           <div className="h-screen w-full flex flex-col justify-center px-8 relative z-10 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full max-w-7xl mx-auto items-center h-full max-h-[90vh]">
               
-              {/* Left Column (Weather & Spotify) */}
-              <div className="col-span-12 md:col-span-3 flex flex-col justify-center space-y-12 h-full">
+              {/* Left Column (Battery, Weather & Spotify) */}
+              <div className="col-span-12 md:col-span-3 flex flex-col justify-center space-y-8 h-full">
+                <div className={`w-full max-w-[320px] transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
+                  <Battery />
+                </div>
+
                 <div className={`w-full max-w-[320px] transition-all duration-500 ${isBlurred ? 'privacy-blur' : ''}`}>
                   <Weather />
                 </div>

@@ -25,7 +25,7 @@
 - **Perspective Layout**: A structured grid that balances focus and information density.
 
 ### 🧩 Core Widgets
-- **🔍 Multi-Engine Search**: Switch between Google, DuckDuckGo, and Perplexity in a single click.
+- **🔍 Multi-Engine Search**: Switch between Google, ChatGPT, and Perplexity in a single click.
 - **⛅ Live Weather**: Dynamic updates powered by OpenWeatherMap API with weather-synced icons.
 - **🎵 Spotify Connect**: Full playback control and real-time "Now Playing" metadata with PKCE authentication.
 - **📝 Productivity Suite**: 

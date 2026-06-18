@@ -20,16 +20,16 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
   const { 
     spotifyToken, setSpotifyToken,
     setSpotifyRefreshToken,
-    spotifyClientId, setSpotifyClientId,
+    spotifyClientId,
     settings, updateWeatherSettings,
     updateSpotifyTrack,
-    weatherConnected, setWeatherConnected
+    weatherConnected, setWeatherConnected,
+    username, setUsername
   } = useWidgetStore();
 
   const { setActiveView } = useViewStore();
   const modalRef = useRef<HTMLDivElement>(null);
   
-  const [showSpotifyId, setShowSpotifyId] = useState(false);
   const [showWeatherKey, setShowWeatherKey] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const { 
@@ -59,8 +59,8 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
   }, []);
 
   const handleSpotifyConnect = async () => {
-    if (!spotifyClientId) {
-      alert('Please enter your Spotify Client ID first.');
+    if (!spotifyClientId || spotifyClientId === 'YOUR_SPOTIFY_CLIENT_ID') {
+      alert('Please configure your Spotify Client ID in src/store/widgetStore.ts first.');
       return;
     }
     try {
@@ -69,7 +69,7 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
       setSpotifyRefreshToken(tokens.refreshToken);
     } catch (error: any) {
       console.error('Spotify login error:', error);
-      alert(`Spotify Connection Error: ${error.message || 'Check your Client ID and Redirect URI.'}`);
+      alert(`Spotify Connection Error: ${error.message || 'Check your Client ID configuration.'}`);
     }
   };
 
@@ -172,22 +172,6 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
                 <Music size={16} /> Spotify Integration
               </label>
               <div className="space-y-4">
-                <div className="relative">
-                  <input 
-                    type={showSpotifyId ? "text" : "password"} 
-                    value={spotifyClientId}
-                    onChange={(e) => setSpotifyClientId(e.target.value)}
-                    className="w-full bg-theme-glass border border-theme-border rounded-xl px-5 py-4 pr-14 outline-none focus:ring-2 focus:ring-theme-border transition-colors text-lg placeholder-theme-muted text-theme-text"
-                    placeholder="Enter Spotify Client ID..."
-                  />
-                  <button 
-                    onClick={() => setShowSpotifyId(!showSpotifyId)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-theme-muted hover:text-theme-text transition-colors"
-                  >
-                    {showSpotifyId ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <button 
                     onClick={handleSpotifyConnect}
@@ -206,9 +190,7 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
                 </div>
 
                 <p className="text-xs text-theme-muted">
-                  Redirect URI: <span className="select-all bg-theme-glass px-2 py-1 rounded">
-                    {typeof chrome !== 'undefined' && chrome.identity ? chrome.identity.getRedirectURL() : 'https://[EXTENSION_ID].chromiumapp.org/'}
-                  </span>
+                  Connect your Spotify account to control playback and display your currently playing song on the home screen.
                 </p>
               </div>
             </div>
@@ -275,31 +257,53 @@ export const Settings = ({ onClose }: { onClose: () => void }) => {
               </div>
             </div>
 
-            {/* Column 3: Google Tasks */}
-            <div className="space-y-6">
-              <label className="text-sm font-bold uppercase tracking-widest text-theme-muted flex items-center gap-2">
-                <ListTodo size={16} /> Google Tasks
-              </label>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={() => syncGoogleTasks(true)}
-                    disabled={googleAuthenticated || isGoogleLoading}
-                    className={`py-4 rounded-xl font-bold transition-all text-lg flex items-center justify-center gap-2 ${googleAuthenticated ? 'bg-theme-bg-accent/10 text-theme-bg-accent cursor-not-allowed border border-theme-bg-accent/20' : 'bg-theme-bg-accent text-theme-contrast hover:opacity-90 shadow-lg shadow-theme-bg-accent/20'}`}
-                  >
-                    {isGoogleLoading ? <Loader2 className="animate-spin" size={20} /> : (googleAuthenticated ? 'Connected' : 'Connect Google Tasks')}
-                  </button>
-                  <button 
-                    onClick={logoutGoogleTasks}
-                    disabled={!googleAuthenticated}
-                    className={`py-4 rounded-xl font-bold transition-all text-lg ${!googleAuthenticated ? 'bg-red-500/10 text-red-500/50 cursor-not-allowed border border-red-500/20' : 'bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500/30'}`}
-                  >
-                    Logout
-                  </button>
+            {/* Column 3: Google Tasks & Profile */}
+            <div className="space-y-10">
+              <div className="space-y-6">
+                <label className="text-sm font-bold uppercase tracking-widest text-theme-muted flex items-center gap-2">
+                  <ListTodo size={16} /> Google Tasks
+                </label>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => syncGoogleTasks(true)}
+                      disabled={googleAuthenticated || isGoogleLoading}
+                      className={`py-4 rounded-xl font-bold transition-all text-lg flex items-center justify-center gap-2 ${googleAuthenticated ? 'bg-theme-bg-accent/10 text-theme-bg-accent cursor-not-allowed border border-theme-bg-accent/20' : 'bg-theme-bg-accent text-theme-contrast hover:opacity-90 shadow-lg shadow-theme-bg-accent/20'}`}
+                    >
+                      {isGoogleLoading ? <Loader2 className="animate-spin" size={20} /> : (googleAuthenticated ? 'Connected' : 'Connect Google Tasks')}
+                    </button>
+                    <button 
+                      onClick={logoutGoogleTasks}
+                      disabled={!googleAuthenticated}
+                      className={`py-4 rounded-xl font-bold transition-all text-lg ${!googleAuthenticated ? 'bg-red-500/10 text-red-500/50 cursor-not-allowed border border-red-500/20' : 'bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500/30'}`}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                  <p className="text-xs text-theme-muted">
+                    Sync your tasks with Google Tasks to access them across all your Google Workspace apps.
+                  </p>
                 </div>
-                <p className="text-xs text-theme-muted">
-                  Sync your tasks with Google Tasks to access them across all your Google Workspace apps.
-                </p>
+              </div>
+
+              <div className="h-px bg-theme-border opacity-20" />
+
+              <div className="space-y-6">
+                <label className="text-sm font-bold uppercase tracking-widest text-theme-muted flex items-center gap-2">
+                  Profile Settings
+                </label>
+                <div className="space-y-4">
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-theme-glass border border-theme-border rounded-xl px-5 py-4 outline-none focus:ring-2 focus:ring-theme-border transition-colors text-lg placeholder-theme-muted text-theme-text"
+                    placeholder="Enter your name..."
+                  />
+                  <p className="text-xs text-theme-muted">
+                    Set your custom username to personalize the time-aware homepage greeting.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

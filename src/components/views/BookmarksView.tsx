@@ -172,15 +172,42 @@ export const BookmarksView: React.FC = () => {
   const displayFolders = useMemo(() => {
     if (!activeFolder) return [];
     
-    let childFolders = activeFolder.children?.filter(n => !n.url) || [];
-    let directBookmarks = activeFolder.children?.filter(n => n.url) || [];
-    
-    // Filter by search query if present
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      childFolders = childFolders.filter(f => f.title.toLowerCase().includes(q));
-      directBookmarks = directBookmarks.filter(b => b.title.toLowerCase().includes(q));
+      
+      const matchingBookmarks: BookmarkNode[] = [];
+      const searchBookmarks = (node: BookmarkNode) => {
+        if (node.url && (node.title.toLowerCase().includes(q) || node.url.toLowerCase().includes(q))) {
+          matchingBookmarks.push(node);
+        }
+        if (node.children) {
+          node.children.forEach(searchBookmarks);
+        }
+      };
+      
+      searchBookmarks(activeFolder);
+      
+      const matchedFolders: BookmarkNode[] = [];
+      const searchFolders = (node: BookmarkNode) => {
+        if (!node.url && node.id !== activeFolder.id && node.title.toLowerCase().includes(q)) {
+          matchedFolders.push(node);
+        }
+        if (node.children) {
+          node.children.forEach(searchFolders);
+        }
+      };
+      searchFolders(activeFolder);
+      
+      const cards = [];
+      if (matchingBookmarks.length > 0) {
+        cards.push({ id: 'search-results-bookmarks', title: 'Matching Bookmarks', children: matchingBookmarks, isMain: true });
+      }
+      cards.push(...matchedFolders);
+      return cards;
     }
+    
+    let childFolders = activeFolder.children?.filter(n => !n.url) || [];
+    let directBookmarks = activeFolder.children?.filter(n => n.url) || [];
     
     const cards = [];
     
@@ -563,6 +590,10 @@ export const BookmarksView: React.FC = () => {
   const handleDelete = async (id: string) => {
     await removeBookmark(id);
     setContextMenu(null);
+    if (activeFolderId === id) {
+      const parentId = activeFolder?.parentId || activeTabId || '1';
+      setActiveFolder(parentId);
+    }
   };
 
   return (
@@ -1436,14 +1467,7 @@ const FolderCard = ({
   onNavigate: (id?: string) => void,
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void
 }) => {
-  const getFaviconUrl = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(urlObj.origin)}&size=32`;
-    } catch {
-      return '';
-    }
-  };
+
 
   const bookmarks = folder.children?.filter(n => n.url) || [];
   const subfolders = folder.children?.filter(n => !n.url) || [];

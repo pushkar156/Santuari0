@@ -37,6 +37,8 @@ interface WidgetState {
   customBackground: string | null;
   recentBackgrounds: string[];
   weatherConnected: boolean;
+  username: string;
+  setUsername: (username: string) => void;
   setWeatherConnected: (connected: boolean) => void;
   setMode: (mode: 'dark' | 'light') => void;
   toggleBlur: () => void;
@@ -92,13 +94,15 @@ export const useWidgetStore = create<WidgetState>()(
       isBlurred: false,
       spotifyToken: null,
       spotifyRefreshToken: null,
-      spotifyClientId: '',
+      spotifyClientId: 'YOUR_SPOTIFY_CLIENT_ID',
       spotifyTrack: null,
       customCSS: '',
       customBackground: null,
       recentBackgrounds: [],
       weatherConnected: false,
+      username: 'Explorer',
 
+      setUsername: (username) => set({ username }),
       setMode: (mode) => set({ mode }),
       setBookmarksViewMode: (mode) => set({ bookmarksViewMode: mode }),
       addBookmarkTab: (tab) => set((state) => ({ bookmarkTabs: [...state.bookmarkTabs, tab] })),

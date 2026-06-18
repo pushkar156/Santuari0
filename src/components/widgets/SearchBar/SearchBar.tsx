@@ -18,6 +18,9 @@ export const SearchBar: React.FC = () => {
       case 'perplexity':
         url = `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`;
         break;
+      case 'chatgpt':
+        url = `https://chatgpt.com/?q=${encodeURIComponent(query)}`;
+        break;
       case 'google':
       default:
         url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
@@ -48,7 +51,7 @@ export const SearchBar: React.FC = () => {
         <button 
           type="button"
           onClick={() => updateSearchEngine('google')}
-          className={`px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${defaultEngine !== 'perplexity' ? 'bg-theme-hover text-theme-text font-bold shadow-md' : 'text-theme-muted hover:text-theme-text'}`}
+          className={`px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${defaultEngine === 'google' ? 'bg-theme-hover text-theme-text font-bold shadow-md' : 'text-theme-muted hover:text-theme-text'}`}
         >
           Google
         </button>
@@ -58,6 +61,13 @@ export const SearchBar: React.FC = () => {
           className={`px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${defaultEngine === 'perplexity' ? 'bg-theme-hover text-theme-text font-bold shadow-md' : 'text-theme-muted hover:text-theme-text'}`}
         >
           Perplexity
+        </button>
+        <button 
+          type="button"
+          onClick={() => updateSearchEngine('chatgpt')}
+          className={`px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${defaultEngine === 'chatgpt' ? 'bg-theme-hover text-theme-text font-bold shadow-md' : 'text-theme-muted hover:text-theme-text'}`}
+        >
+          ChatGPT
         </button>
       </div>
     </div>

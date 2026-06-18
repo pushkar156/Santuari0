@@ -1,11 +1,20 @@
 import { useTime } from '../../../hooks/useTime';
 import { motion } from 'framer-motion';
+import { useWidgetStore } from '../../../store/widgetStore';
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export const Clock = () => {
   const time = useTime();
+  const username = useWidgetStore((state) => state.username);
+  
+  const getGreeting = (hour: number) => {
+    if (hour >= 4 && hour < 12) return "Good morning";
+    if (hour >= 12 && hour < 17) return "Good afternoon";
+    if (hour >= 17 && hour < 23) return "Good evening";
+    return "Good night";
+  };
   
   const h = time.getHours();
   const m = time.getMinutes();
@@ -149,7 +158,11 @@ export const Clock = () => {
       </div>
 
       {/* Digital and Date Section (Right Side) */}
-      <div className="flex flex-col items-start gap-4 min-w-[200px]">
+      <div className="flex flex-col items-start gap-3 min-w-[200px]">
+        {/* Personalized Greeting */}
+        <div className="text-xs font-bold uppercase tracking-[0.2em] text-theme-muted opacity-80">
+          {getGreeting(h)}, {username}
+        </div>
         {/* Digital Section */}
         <div className="flex items-baseline gap-1">
           <div className="text-5xl font-medium text-theme-text tabular-nums tracking-tight leading-none">
