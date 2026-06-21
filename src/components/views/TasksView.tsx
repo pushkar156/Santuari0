@@ -266,6 +266,14 @@ export const TasksView: React.FC = () => {
   const [newListTitle, setNewListTitle] = useState('');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [bursts, setBursts] = useState<{ id: number, x: number, y: number }[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const matchSearch = (t: GoogleTask, q: string) => {
+    if (!q) return true;
+    const lowerQ = q.toLowerCase();
+    return t.title.toLowerCase().includes(lowerQ) || !!(t.notes && t.notes.toLowerCase().includes(lowerQ));
+  };
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -273,6 +281,14 @@ export const TasksView: React.FC = () => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -406,7 +422,7 @@ export const TasksView: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-2">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1 pr-2">
             <div className="space-y-1 mb-6">
               <button
                 onClick={() => setShowTodayColumn(!showTodayColumn)}
@@ -491,8 +507,30 @@ export const TasksView: React.FC = () => {
       <main className="flex-1 flex flex-col min-w-0 bg-transparent overflow-hidden relative">
         <header className="flex-shrink-0 h-24 flex items-center justify-between px-10 border-b border-theme-border/20 backdrop-blur-md">
           <div className="flex items-center gap-6">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-theme-bg-accent/5 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-bg-accent transition-all">
-              <Menu size={20} />
+            {/* Animated hamburger / X toggle */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-3 bg-theme-bg-accent/5 hover:bg-theme-bg-accent/10 rounded-2xl text-theme-bg-accent transition-all relative w-11 h-11 flex items-center justify-center"
+              aria-label="Toggle sidebar"
+            >
+              <span className="sr-only">Toggle sidebar</span>
+              <span className="flex flex-col gap-[5px] w-5">
+                <motion.span
+                  animate={sidebarOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                  className="block h-0.5 w-full bg-current rounded-full origin-center"
+                />
+                <motion.span
+                  animate={sidebarOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+                  transition={{ duration: 0.15 }}
+                  className="block h-0.5 w-full bg-current rounded-full"
+                />
+                <motion.span
+                  animate={sidebarOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                  className="block h-0.5 w-full bg-current rounded-full origin-center"
+                />
+              </span>
             </button>
             <h1 className="text-2xl font-black text-theme-text tracking-tight flex items-center gap-3">
               Santuario Tasks
@@ -505,6 +543,23 @@ export const TasksView: React.FC = () => {
                 {storeError}
               </div>
             )}
+            {/* Inline Search Bar */}
+            <div className="relative flex items-center">
+              <Search size={16} className="absolute left-3 text-theme-muted pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="bg-theme-bg-accent/5 border border-theme-border/30 rounded-xl pl-9 pr-4 py-2 text-sm text-theme-text placeholder:text-theme-muted/40 outline-none focus:border-theme-bg-accent/40 focus:bg-theme-bg-accent/10 transition-all w-48 focus:w-64"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2 text-theme-muted hover:text-theme-text transition-colors">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
             <button 
               onClick={() => {
                 fetchLists();
@@ -519,14 +574,15 @@ export const TasksView: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-row gap-8 p-10 overflow-x-auto overflow-y-hidden custom-scrollbar bg-theme-glass/10 rounded-t-[48px] border-t border-x border-theme-border/50 backdrop-blur-2xl shadow-[0_-20px_80px_rgba(0,0,0,0.3)] mx-6">
+        <div className="flex-1 flex flex-row gap-0 p-0 overflow-x-auto overflow-y-hidden custom-scrollbar bg-theme-glass/10 border-t border-theme-border/50 backdrop-blur-2xl">
           <AnimatePresence mode="popLayout">
-            {showTodayColumn && (
+            {showTodayColumn && (!searchQuery || todayTasks.filter(t => matchSearch(t, searchQuery)).length > 0) && (
               <motion.div layout key="column-today" className="flex-shrink-0 h-full">
                 <TaskColumn
                   listId="__today"
                   title="My Day"
-                  tasks={todayTasks}
+                  tasks={todayTasks.filter(t => matchSearch(t, searchQuery))}
+                  searchQuery={searchQuery}
                   sensors={sensors}
                   selectedTaskId={selectedTaskId}
                   focusedTaskId={focusedTaskId}
@@ -543,12 +599,13 @@ export const TasksView: React.FC = () => {
                 />
               </motion.div>
             )}
-            {showStarredColumn && (
+            {showStarredColumn && (!searchQuery || starredTasks.filter(t => matchSearch(t, searchQuery)).length > 0) && (
               <motion.div layout key="column-starred" className="flex-shrink-0 h-full">
                 <TaskColumn
                   listId="__starred"
                   title="Starred"
-                  tasks={starredTasks}
+                  tasks={starredTasks.filter(t => matchSearch(t, searchQuery))}
+                  searchQuery={searchQuery}
                   sensors={sensors}
                   selectedTaskId={selectedTaskId}
                   focusedTaskId={focusedTaskId}
@@ -568,12 +625,16 @@ export const TasksView: React.FC = () => {
             {listOrder.filter(id => visibleListIds.includes(id)).map(listId => {
               const list = displayLists.find(l => l.id === listId);
               if (!list) return null;
+              const filteredTasks = displayTasksByList[list.id]?.filter(t => matchSearch(t, searchQuery)) || [];
+              if (searchQuery && filteredTasks.length === 0) return null;
+              
               return (
                 <motion.div layout key={`column-${listId}`} className="flex-shrink-0 h-full">
                   <TaskColumn
                     listId={listId}
                     title={list.title}
-                    tasks={displayTasksByList[listId] || []}
+                    tasks={filteredTasks}
+                    searchQuery={searchQuery}
                     sensors={sensors}
                     selectedTaskId={selectedTaskId}
                     focusedTaskId={focusedTaskId}
@@ -698,6 +759,33 @@ export const TasksView: React.FC = () => {
     </div>
   );
 };
+const MarqueeText: React.FC<{ text: string; className?: string }> = ({ text, className }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (containerRef.current && textRef.current) {
+        setIsOverflowing(textRef.current.scrollWidth > containerRef.current.clientWidth);
+      }
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [text]);
+
+  return (
+    <div ref={containerRef} className={`overflow-hidden whitespace-nowrap flex-1 min-w-0 ${className || ''}`}>
+      <div className={`${isOverflowing ? 'animate-scrolling-text' : 'w-full'}`}>
+        <span ref={textRef} className={isOverflowing ? 'pr-8' : 'truncate text-left block w-full'}>
+          {text}
+        </span>
+        {isOverflowing && <span className="pr-8">{text}</span>}
+      </div>
+    </div>
+  );
+};
 
 const SidebarListItem: React.FC<{
   list: GoogleTaskList;
@@ -730,14 +818,14 @@ const SidebarListItem: React.FC<{
       </div>
       <button
         onClick={onToggle}
-        className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-[18px] transition-all ${isVisible ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+        className={`flex-1 min-w-0 flex items-center justify-between px-3 py-2.5 rounded-[18px] transition-all ${isVisible ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
       >
-        <div className="flex items-center gap-3 truncate">
-          <div className={`w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all ${isVisible ? 'bg-theme-bg-accent border-theme-bg-accent shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'border-theme-border'}`}>
+        <div className="flex items-center gap-3 w-full min-w-0">
+          <div className={`flex-shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all ${isVisible ? 'bg-theme-bg-accent border-theme-bg-accent shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'border-theme-border'}`}>
             {isVisible && <Check size={12} className="text-theme-contrast" strokeWidth={4} />}
           </div>
           {isEditing ? (
-            <form onSubmit={handleRename} className="flex-1">
+            <form onSubmit={handleRename} className="flex-1 min-w-0">
               <input
                 autoFocus
                 value={editTitle}
@@ -747,7 +835,7 @@ const SidebarListItem: React.FC<{
               />
             </form>
           ) : (
-            <span className="text-sm font-bold truncate">{list.title}</span>
+            <MarqueeText text={list.title} className="text-sm font-bold" />
           )}
         </div>
       </button>
@@ -763,6 +851,20 @@ const SidebarListItem: React.FC<{
   );
 };
 
+const HighlightText: React.FC<{ text: string; query?: string }> = ({ text, query }) => {
+  if (!query) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${query})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, i) => 
+        part.toLowerCase() === query.toLowerCase() 
+          ? <span key={i} className="bg-theme-bg-accent/30 text-theme-bg-accent rounded-sm px-0.5">{part}</span> 
+          : <span key={i}>{part}</span>
+      )}
+    </>
+  );
+};
+
 // ─── Column Component ────────────────────────────────────────────────────────
 const TaskColumn: React.FC<{
   listId: string; title: string; tasks: GoogleTask[];
@@ -774,11 +876,12 @@ const TaskColumn: React.FC<{
   onAddTask: (text: string, parent?: string, previous?: string) => void; onMoveTask: (id: string, parent?: string, prev?: string) => void;
   onClearCompleted: () => void; onRenameList: (t: string) => Promise<void>;
   onDeleteList: (id: string) => void;
+  searchQuery?: string;
 }> = ({
   listId, title, tasks, sensors,
   selectedTaskId, focusedTaskId, setFocusedTaskId,
   onSelect, onToggle, onRemove, onUpdate, onAddTask, onMoveTask,
-  onClearCompleted, onRenameList, onDeleteList
+  onClearCompleted, onRenameList, onDeleteList, searchQuery
 }) => {
   const [newTaskText, setNewTaskText] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -895,7 +998,7 @@ const TaskColumn: React.FC<{
   const isSpecial = listId.startsWith('__');
 
   return (
-    <div className="w-[360px] flex-shrink-0 flex flex-col h-full bg-theme-glass/40 backdrop-blur-3xl rounded-[40px] overflow-hidden border border-theme-border shadow-2xl shadow-black/10 group/column transition-all duration-700 hover:bg-theme-glass/60 hover:border-theme-border/60 hover:shadow-theme-bg-accent/5">
+    <div className="w-[360px] flex-shrink-0 flex flex-col h-full bg-theme-glass/40 backdrop-blur-3xl rounded-none overflow-hidden border-r border-theme-border group/column transition-all duration-300 hover:bg-theme-glass/60">
       <div className="flex-shrink-0 flex items-center justify-between px-8 py-7 bg-gradient-to-b from-theme-bg-accent/5 to-transparent">
         <div className="flex-1 min-w-0 mr-3">
           {isEditingTitle ? (
@@ -1001,8 +1104,8 @@ const TaskColumn: React.FC<{
       {/* Add task input - Strategy #6: Recessed Slot Feel */}
       <div className="flex-shrink-0 px-8 py-4 mb-4">
         <form onSubmit={handleAdd} className="relative group">
-          <div className="absolute inset-0 bg-theme-bg-accent/5 rounded-[22px] blur-[1px] opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <div className="relative flex items-center gap-3 bg-theme-bg-accent/5 border border-theme-border rounded-[20px] px-5 py-4 transition-all duration-300 focus-within:border-theme-bg-accent/20 focus-within:bg-theme-bg-accent/[0.08] focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
+          <div className="absolute inset-0 bg-theme-bg-accent/5 rounded-sm blur-[1px] opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative flex items-center gap-3 bg-theme-bg-accent/5 border border-theme-border rounded-sm px-5 py-3.5 transition-all duration-300 focus-within:border-theme-bg-accent/20 focus-within:bg-theme-bg-accent/[0.08]">
             <button type="submit" className="text-theme-muted hover:text-theme-bg-accent transition-colors">
               <Plus size={18} className="transition-transform group-focus-within:rotate-90 duration-300" />
             </button>
@@ -1040,7 +1143,7 @@ const TaskColumn: React.FC<{
         >
           <SortableContext items={flattenedIds} strategy={verticalListSortingStrategy}>
             <AnimatePresence mode="popLayout" initial={false}>
-              {flattenedTasks.length === 0 ? (
+              {flattenedTasks.length === 0 && !searchQuery ? (
                 <motion.div 
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }}
@@ -1086,6 +1189,7 @@ const TaskColumn: React.FC<{
                       const idx = flattenedIds.indexOf(id);
                       if (idx < flattenedIds.length - 1) setFocusedTaskId(flattenedIds[idx+1]);
                     }}
+                    searchQuery={searchQuery}
                   />
                 ))
               )}
@@ -1150,10 +1254,11 @@ const TaskItem: React.FC<{
   onOutdent: (id: string) => void; onUpdateTask: (id: string, u: Partial<GoogleTask>) => void;
   onEnter: (id: string) => void; onBackspace: (id: string, title: string) => void;
   onArrowUp: (id: string) => void; onArrowDown: (id: string) => void;
+  searchQuery?: string;
 }> = ({
   task, depth, isSelected, focusedTaskId, setFocusedTaskId,
   onToggle, onRemove, onSelect, onIndent, onOutdent,
-  onUpdateTask, onEnter, onBackspace, onArrowUp, onArrowDown
+  onUpdateTask, onEnter, onBackspace, onArrowUp, onArrowDown, searchQuery
 }) => {
   const [expanded, setExpanded] = useState(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1241,7 +1346,12 @@ const TaskItem: React.FC<{
           )}
         </motion.button>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative">
+          {searchQuery && !isFocused && (
+            <div className={`absolute inset-0 pointer-events-none whitespace-pre-wrap break-words text-sm p-0 custom-scrollbar-thin ${task.status === 'completed' ? 'line-through opacity-50 text-theme-muted' : 'text-theme-text'}`}>
+              <HighlightText text={task.title} query={searchQuery} />
+            </div>
+          )}
           <textarea
             ref={inputRef}
             value={task.title}
@@ -1250,7 +1360,11 @@ const TaskItem: React.FC<{
             onFocus={() => setFocusedTaskId(task.id)}
             rows={1}
             placeholder="New task"
-            className={`w-full bg-transparent border-none focus:outline-none focus-visible:outline-none focus:ring-0 text-sm text-theme-text placeholder:text-theme-muted resize-none p-0 custom-scrollbar-thin overflow-y-hidden ${task.status === 'completed' ? 'line-through opacity-50' : ''}`}
+            className={`w-full bg-transparent border-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 text-sm placeholder:text-theme-muted resize-none p-0 custom-scrollbar-thin overflow-y-hidden ${
+              task.status === 'completed' 
+                ? `line-through opacity-50 ${searchQuery && !isFocused ? 'text-transparent caret-transparent' : 'text-theme-muted'}`
+                : (searchQuery && !isFocused ? 'text-transparent caret-transparent' : 'text-theme-text')
+            }`}
           />
           
           {(task.notes || task.due) && (
@@ -1276,6 +1390,7 @@ const TaskItem: React.FC<{
         <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
           <button
             onClick={e => { e.stopPropagation(); onUpdateTask(task.id, { starred: !task.starred }); }}
+            title={task.starred ? 'Remove star (saved locally)' : 'Star task (saved locally)'}
             className={`p-1.5 rounded-lg transition-all ${task.starred ? 'text-amber-500 bg-amber-500/10' : 'text-theme-muted opacity-0 group-hover/item:opacity-100 hover:text-amber-500 hover:bg-amber-500/5'}`}
           >
             <Star size={14} fill={task.starred ? 'currentColor' : 'none'} strokeWidth={task.starred ? 2.5 : 2} />

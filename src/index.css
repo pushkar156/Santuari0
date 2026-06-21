@@ -99,6 +99,25 @@
     background-clip: padding-box;
   }
 
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .animate-scrolling-text {
+    display: inline-block;
+    white-space: nowrap;
+    animation: scroll-left 10s linear infinite;
+  }
+
+  .hover-marquee:hover .animate-scrolling-text {
+    animation-play-state: running;
+  }
+  
+  .hover-marquee .animate-scrolling-text {
+    animation-play-state: paused;
+  }
+
   .custom-scrollbar-thin::-webkit-scrollbar {
     width: 3px;
   }
