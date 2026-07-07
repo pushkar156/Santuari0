@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronRight, ChevronLeft, Edit2, Link, FolderPlus, BookmarkPlus, X, List, Plus, Layers, Play, Save } from 'lucide-react';
+import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronRight, ChevronLeft, Edit2, Link, FolderPlus, BookmarkPlus, X, List, Plus, Layers, Play, Save, ExternalLink } from 'lucide-react';
 import { useBookmarksStore, BookmarkNode } from '../../store/bookmarksStore';
 import { useWidgetStore } from '../../store/widgetStore';
 import { useViewStore } from '../../store/viewStore';
@@ -18,6 +18,60 @@ const getFaviconUrl = (url: string) => {
   }
 };
 
+const FaviconWithFallback: React.FC<{ url: string; title: string; className?: string }> = ({ url, title, className = "w-3.5 h-3.5" }) => {
+  const [isFailed, setIsFailed] = useState(false);
+  const faviconUrl = getFaviconUrl(url);
+
+  if (isFailed || !faviconUrl) {
+    const letter = title ? title.trim().charAt(0).toUpperCase() : '?';
+    const colors = [
+      'bg-red-500/20 text-red-300 border-red-500/30',
+      'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      'bg-pink-500/20 text-pink-300 border-pink-500/30',
+      'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+      'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    ];
+    let hash = 0;
+    for (let i = 0; i < title.length; i++) {
+      hash = title.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colorClass = colors[Math.abs(hash) % colors.length];
+
+    return (
+      <div className={`flex items-center justify-center rounded-[4px] border text-[9px] font-black uppercase flex-shrink-0 ${colorClass} ${className}`}>
+        {letter}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={faviconUrl}
+      alt=""
+      onError={() => setIsFailed(true)}
+      className={`${className} object-contain opacity-70 group-hover/item:opacity-100 transition-opacity drop-shadow-sm flex-shrink-0`}
+    />
+  );
+};
+
+const HighlightText: React.FC<{ text: string; query?: string; className?: string }> = ({ text, query, className }) => {
+  if (!query || !query.trim()) return <span className={className}>{text}</span>;
+  const regex = new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <span className={className}>
+      {parts.map((part, i) => 
+        part.toLowerCase() === query.toLowerCase() 
+          ? <span key={i} className="bg-theme-bg-accent/30 text-theme-bg-accent rounded-sm px-0.5 font-bold">{part}</span> 
+          : <span key={i}>{part}</span>
+      )}
+    </span>
+  );
+};
+
 export const BookmarksView: React.FC = () => {
   const { 
     tree, 
@@ -26,7 +80,8 @@ export const BookmarksView: React.FC = () => {
     fetchTree, 
     createBookmark, 
     updateBookmark, 
-    removeBookmark 
+    removeBookmark,
+    moveBookmark
   } = useBookmarksStore();
   const { 
     isBlurred, 
@@ -458,6 +513,37 @@ export const BookmarksView: React.FC = () => {
     }
   };
 
+  const openAllInFolder = async (folderNode: BookmarkNode, inNewWindow: boolean = false) => {
+    const urls: string[] = [];
+    const collectUrls = (node: BookmarkNode) => {
+      if (node.url) {
+        urls.push(node.url);
+      }
+      if (node.children) {
+        node.children.forEach(collectUrls);
+      }
+    };
+    collectUrls(folderNode);
+
+    if (urls.length === 0) return;
+
+    if (inNewWindow) {
+      if (typeof chrome !== 'undefined' && chrome.windows) {
+        await chrome.windows.create({ url: urls });
+      } else {
+        urls.forEach(url => window.open(url, '_blank'));
+      }
+    } else {
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        for (const url of urls) {
+          await chrome.tabs.create({ url, active: false });
+        }
+      } else {
+        urls.forEach(url => window.open(url, '_blank'));
+      }
+    }
+  };
+
   const openRenameWorkspaceModal = (workspace: any) => {
     setModalType('renameWorkspace');
     setSelectedWorkspaceId(workspace.id);
@@ -856,7 +942,6 @@ export const BookmarksView: React.FC = () => {
                         {/* Scrollable list of captured tabs with group highlights */}
                         <div className="space-y-1.5 max-h-[140px] overflow-y-auto custom-scrollbar pr-1.5 relative z-10 mb-4">
                           {workspace.tabs.map((tab: any, tIdx: number) => {
-                            const faviconUrl = getFaviconUrl(tab.url);
                             const hasGroup = !!tab.groupTitle;
                             
                             // Color helper for groups matching chrome group colors
@@ -898,18 +983,7 @@ export const BookmarksView: React.FC = () => {
                               >
                                 <div className="flex items-center gap-2 min-w-0 flex-1 pointer-events-none">
                                   <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-white/5 rounded shadow-sm border border-white/5">
-                                    {tab.url ? (
-                                      <img 
-                                        src={faviconUrl} 
-                                        alt="" 
-                                        onError={(e) => {
-                                          (e.target as HTMLElement).style.display = 'none';
-                                        }}
-                                        className="w-3 h-3 object-contain opacity-70 group-hover/item:opacity-100" 
-                                      />
-                                    ) : (
-                                      <Bookmark size={10} className="text-white/40" />
-                                    )}
+                                    <FaviconWithFallback url={tab.url} title={tab.title || tab.url} className="w-3 h-3" />
                                   </div>
                                   <span className="text-[12px] font-medium text-white/60 group-hover/item:text-white/90 truncate">
                                     {tab.title || tab.url}
@@ -999,6 +1073,8 @@ export const BookmarksView: React.FC = () => {
                         const y = Math.min(e.clientY, window.innerHeight - 250);
                         setContextMenu({ x, y, node });
                       }}
+                      moveBookmark={moveBookmark}
+                      searchQuery={searchQuery}
                     />
                   </motion.div>
                 ))}
@@ -1026,7 +1102,29 @@ export const BookmarksView: React.FC = () => {
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
           >
-            {contextMenu.node.url && (
+            {!contextMenu.node.url ? (
+              <>
+                <button 
+                  onClick={() => {
+                    openAllInFolder(contextMenu.node, false);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                >
+                  <Link size={14} /> Open All in New Tabs
+                </button>
+                <button 
+                  onClick={() => {
+                    openAllInFolder(contextMenu.node, true);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                >
+                  <ExternalLink size={14} /> Open All in New Window
+                </button>
+                <div className="h-px bg-white/10 my-1 mx-2" />
+              </>
+            ) : (
               <>
                 <button 
                   onClick={() => {
@@ -1509,24 +1607,62 @@ const FolderCard = ({
   isBlurred,
   viewMode = 'grid',
   onNavigate,
-  onContextMenu
+  onContextMenu,
+  moveBookmark,
+  searchQuery
 }: { 
   folder: BookmarkNode, 
   isBlurred: boolean,
   viewMode?: 'grid' | 'list',
   onNavigate: (id?: string) => void,
-  onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void
+  onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void,
+  moveBookmark: (id: string, destination: { parentId: string, index?: number }) => Promise<void>,
+  searchQuery?: string
 }) => {
-
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
 
   const bookmarks = folder.children?.filter(n => n.url) || [];
   const subfolders = folder.children?.filter(n => !n.url) || [];
   
   if (bookmarks.length === 0 && subfolders.length === 0) return null;
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (draggedId && draggedId !== folder.id) {
+      try {
+        await moveBookmark(draggedId, { parentId: folder.id });
+      } catch (err) {
+        console.error('Failed to move bookmark:', err);
+      }
+    }
+  };
+
   return (
     <div 
-      className={`group relative overflow-hidden bg-black/20 hover:bg-black/40 backdrop-blur-2xl border border-white/5 hover:border-white/15 rounded-[24px] p-5 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)] ${viewMode === 'list' ? 'flex flex-col md:flex-row gap-6' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`group relative overflow-hidden bg-black/20 hover:bg-black/40 backdrop-blur-2xl border rounded-[24px] p-5 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)] ${
+        isDragOver ? 'border-theme-bg-accent/40 bg-theme-bg-accent/5 shadow-[0_0_25px_rgba(255,255,255,0.1)]' : 'border-white/5 hover:border-white/15'
+      } ${viewMode === 'list' ? 'flex flex-col md:flex-row gap-6' : ''}`}
       onContextMenu={(e) => {
         if ((folder as any).isMain) {
           e.preventDefault();
@@ -1552,7 +1688,7 @@ const FolderCard = ({
           }
         }}
       >
-        <h3 className="text-[15px] font-semibold text-white/90 tracking-wide hover:text-white transition-colors">{folder.title}</h3>
+        <HighlightText text={folder.title} query={searchQuery} className="text-[15px] font-semibold text-white/90 tracking-wide hover:text-white transition-colors" />
         {!(folder as any).isMain && (
           <button className="text-white/30 hover:text-white/80 transition-colors" onClick={(e) => {
             e.stopPropagation();
@@ -1565,29 +1701,69 @@ const FolderCard = ({
 
       <div className={`flex flex-col space-y-0.5 relative z-10 ${viewMode === 'list' ? 'flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 space-y-0' : ''}`}>
         {bookmarks.slice(0, viewMode === 'list' ? 99 : 12).map(bm => (
-          <a 
-            key={bm.id} 
-            href={bm.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-[14px] hover:bg-white/10 transition-colors group/item"
-            onContextMenu={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onContextMenu(e, bm);
-            }}
-          >
-            <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center bg-white/5 group-hover/item:bg-white/10 rounded-lg shadow-sm border border-white/5 group-hover/item:border-white/10 transition-colors">
-              {bm.url ? (
-                <img src={getFaviconUrl(bm.url)} alt="" className="w-3.5 h-3.5 object-contain opacity-70 group-hover/item:opacity-100 transition-opacity drop-shadow-sm" />
-              ) : (
-                <Bookmark size={12} className="text-white/40 group-hover/item:text-white/80" />
-              )}
-            </div>
-            <span className={`text-[13px] font-medium text-white/60 group-hover/item:text-white/95 truncate transition-colors ${isBlurred ? 'blur-[4px] select-none' : ''}`}>
-              {bm.title}
-            </span>
-          </a>
+          <div key={bm.id} className="relative">
+            {dragOverItemId === bm.id && dropPosition && (
+              <div className={`absolute left-0 right-0 h-0.5 bg-theme-bg-accent z-20 ${
+                dropPosition === 'before' ? '-top-[2px]' : '-bottom-[2px]'
+              }`} />
+            )}
+            <a 
+              href={bm.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', bm.id);
+                e.stopPropagation();
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverItemId(bm.id);
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseY = e.clientY - rect.top;
+                setDropPosition(mouseY > rect.height / 2 ? 'after' : 'before');
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverItemId(null);
+                setDropPosition(null);
+              }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const currentDropPos = dropPosition;
+                setDragOverItemId(null);
+                setDropPosition(null);
+                const draggedId = e.dataTransfer.getData('text/plain');
+                if (draggedId && draggedId !== bm.id) {
+                  let targetIndex = folder.children?.findIndex(child => child.id === bm.id) ?? -1;
+                  if (targetIndex !== -1) {
+                    if (currentDropPos === 'after') {
+                      targetIndex += 1;
+                    }
+                    try {
+                      await moveBookmark(draggedId, { parentId: folder.id, index: targetIndex });
+                    } catch (err) {
+                      console.error('Failed to move bookmark:', err);
+                    }
+                  }
+                }
+              }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-[14px] hover:bg-white/10 transition-colors group/item"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onContextMenu(e, bm);
+              }}
+            >
+              <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center bg-white/5 group-hover/item:bg-white/10 rounded-lg shadow-sm border border-white/5 group-hover/item:border-white/10 transition-colors">
+                <FaviconWithFallback url={bm.url || ''} title={bm.title} />
+              </div>
+              <HighlightText text={bm.title} query={searchQuery} className={`text-[13px] font-medium text-white/60 group-hover/item:text-white/95 truncate transition-colors ${isBlurred ? 'blur-[4px] select-none' : ''}`} />
+            </a>
+          </div>
         ))}
         
         {viewMode === 'grid' && bookmarks.length > 12 && (
@@ -1616,14 +1792,59 @@ const FolderCard = ({
               onContextMenu(e, sub);
             }}
           >
+            {dragOverItemId === sub.id && dropPosition && (
+              <div className={`absolute left-0 right-0 h-0.5 bg-theme-bg-accent z-20 ${
+                dropPosition === 'before' ? '-top-[2px]' : '-bottom-[2px]'
+              }`} />
+            )}
             <div 
               className="flex items-center gap-3 px-3 py-2.5 rounded-[14px] hover:bg-white/10 transition-colors cursor-pointer text-white/60 hover:text-white group/folder"
               onClick={() => onNavigate(sub.id)}
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', sub.id);
+                e.stopPropagation();
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverItemId(sub.id);
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseY = e.clientY - rect.top;
+                setDropPosition(mouseY > rect.height / 2 ? 'after' : 'before');
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverItemId(null);
+                setDropPosition(null);
+              }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const currentDropPos = dropPosition;
+                setDragOverItemId(null);
+                setDropPosition(null);
+                const draggedId = e.dataTransfer.getData('text/plain');
+                if (draggedId && draggedId !== sub.id) {
+                  let targetIndex = folder.children?.findIndex(child => child.id === sub.id) ?? -1;
+                  if (targetIndex !== -1) {
+                    if (currentDropPos === 'after') {
+                      targetIndex += 1;
+                    }
+                    try {
+                      await moveBookmark(draggedId, { parentId: folder.id, index: targetIndex });
+                    } catch (err) {
+                      console.error('Failed to move folder:', err);
+                    }
+                  }
+                }
+              }}
             >
               <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center bg-white/5 group-hover/folder:bg-white/10 rounded-lg shadow-sm border border-white/5 transition-colors">
                 <Folder size={12} className="opacity-70 group-hover/folder:opacity-100" />
               </div>
-              <span className="text-[13px] font-medium truncate">{sub.title}</span>
+              <HighlightText text={sub.title} query={searchQuery} className="text-[13px] font-medium truncate" />
             </div>
           </div>
         ))}
