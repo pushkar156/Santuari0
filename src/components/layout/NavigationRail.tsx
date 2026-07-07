@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, CheckSquare, Calendar, Bookmark, HardDrive, Settings, Sun, Moon, Bot, Image as ImageIcon } from 'lucide-react';
+import { Home, CheckSquare, Bookmark, HardDrive, Settings, Sun, Moon, Bot, Image as ImageIcon } from 'lucide-react';
 import { useViewStore, ViewType } from '../../store/viewStore';
 import { useWidgetStore } from '../../store/widgetStore';
 import GooeyNav, { GooeyNavItem } from '../ui/GooeyNav';
@@ -7,7 +7,6 @@ import GooeyNav, { GooeyNavItem } from '../ui/GooeyNav';
 const navItems: GooeyNavItem[] = [
   { id: 'home', icon: <Home size={22} />, label: 'Home' },
   { id: 'tasks', icon: <CheckSquare size={22} />, label: 'Tasks' },
-  { id: 'calendar', icon: <Calendar size={22} />, label: 'Calendar' },
   { id: 'bookmarks', icon: <Bookmark size={22} />, label: 'Bookmarks' },
   { type: 'separator' },
   { id: 'drive', icon: <HardDrive size={22} />, label: 'Drive' },

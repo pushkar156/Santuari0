@@ -39,7 +39,7 @@ export const BookmarksView: React.FC = () => {
     removeBookmarkTab
   } = useWidgetStore();
   const { setActiveView } = useViewStore();
-  const { workspaces, addWorkspace, renameWorkspace, deleteWorkspace, setWorkspaceActiveSession } = useWorkspaceStore();
+  const { workspaces, addWorkspace, renameWorkspace, deleteWorkspace, setWorkspaceActiveSession, updateWorkspaceTabs, setRestoringWorkspaceId } = useWorkspaceStore();
 
 
   const [activeTabId, setActiveTabId] = useState('1');
@@ -71,6 +71,21 @@ export const BookmarksView: React.FC = () => {
 
   useEffect(() => {
     fetchTree();
+    
+    if (typeof chrome !== 'undefined' && chrome.bookmarks) {
+      const listener = () => fetchTree();
+      chrome.bookmarks.onCreated.addListener(listener);
+      chrome.bookmarks.onRemoved.addListener(listener);
+      chrome.bookmarks.onChanged.addListener(listener);
+      chrome.bookmarks.onMoved.addListener(listener);
+      
+      return () => {
+        chrome.bookmarks.onCreated.removeListener(listener);
+        chrome.bookmarks.onRemoved.removeListener(listener);
+        chrome.bookmarks.onChanged.removeListener(listener);
+        chrome.bookmarks.onMoved.removeListener(listener);
+      };
+    }
   }, [fetchTree]);
 
   // Fetch live chrome groups for context menus
@@ -185,18 +200,19 @@ export const BookmarksView: React.FC = () => {
         }
       };
       
-      searchBookmarks(activeFolder);
+      const tabRoot = findNode(tree, activeTabId) || activeFolder;
+      searchBookmarks(tabRoot);
       
       const matchedFolders: BookmarkNode[] = [];
       const searchFolders = (node: BookmarkNode) => {
-        if (!node.url && node.id !== activeFolder.id && node.title.toLowerCase().includes(q)) {
+        if (!node.url && node.id !== tabRoot.id && node.title.toLowerCase().includes(q)) {
           matchedFolders.push(node);
         }
         if (node.children) {
           node.children.forEach(searchFolders);
         }
       };
-      searchFolders(activeFolder);
+      searchFolders(tabRoot);
       
       const cards = [];
       if (matchingBookmarks.length > 0) {
@@ -297,6 +313,7 @@ export const BookmarksView: React.FC = () => {
             favIconUrl: tab.favIconUrl || '',
             groupTitle: group?.title || '',
             groupColor: group?.color || '',
+            tabId: tab.id,
           };
         });
 
@@ -326,21 +343,18 @@ export const BookmarksView: React.FC = () => {
   const restoreWorkspaceSession = async (workspace: any) => {
     if (typeof chrome !== 'undefined' && chrome.windows && chrome.tabs) {
       try {
-        const currentWindow = await chrome.windows.getCurrent();
-        const currentWindowId = currentWindow.id;
-        if (!currentWindowId) return;
-
+        setRestoringWorkspaceId(workspace.id);
         if (workspace.activeWindowId) {
-          if (workspace.activeWindowId === currentWindowId) {
-            // Already active in this window, just close modal
+          const currentWindow = await chrome.windows.getCurrent();
+          if (workspace.activeWindowId === currentWindow.id) {
             setIsModalOpen(false);
+            setRestoringWorkspaceId(null);
             return;
           }
           try {
             await chrome.windows.update(workspace.activeWindowId, { focused: true });
             return;
           } catch {
-            // Window might have been closed, clear the session and proceed to launch in current window
             setWorkspaceActiveSession(workspace.id, null);
           }
         }
@@ -348,47 +362,50 @@ export const BookmarksView: React.FC = () => {
         const firstTab = workspace.tabs[0];
         if (!firstTab) return;
 
-        // Only close blank new tabs to avoid destroying user's current work
-        // Removed querying and closing tabs to prevent accidental data loss.
-
-        // Set this workspace as the active session for the current window
-        setWorkspaceActiveSession(workspace.id, currentWindowId);
-
-        // Open the workspace tabs in the current window.
-        // We'll create the new workspace tabs first, then close the non-Santuario tabs to ensure window stays open.
-        const allNewTabsInfo: { id: number; info: any }[] = [];
-
-        // Create the first tab
-        const firstCreatedTab = await chrome.tabs.create({
-          windowId: currentWindowId,
+        const newWindow = await chrome.windows.create({
           url: firstTab.url,
-          active: true
+          focused: true
         });
-        if (firstCreatedTab.id) {
-          allNewTabsInfo.push({ id: firstCreatedTab.id, info: firstTab });
+        
+        const newWindowId = newWindow.id;
+        if (!newWindowId) return;
+        
+        // Robust retrieval of the first tab's ID
+        let firstTabChromeId = newWindow.tabs?.[0]?.id;
+        if (!firstTabChromeId) {
+          const newWindowTabs = await chrome.tabs.query({ windowId: newWindowId });
+          firstTabChromeId = newWindowTabs[0]?.id;
         }
 
-        // Create the remaining workspace tabs
+        const allNewTabsInfo: { id: number; info: any }[] = [];
+        if (firstTabChromeId) {
+          allNewTabsInfo.push({ id: firstTabChromeId, info: firstTab });
+        }
+
+        setWorkspaceActiveSession(workspace.id, newWindowId);
+
         const tabsToCreate = workspace.tabs.slice(1);
         const tabPromises = tabsToCreate.map(async (wTab: any) => {
-          const tab = await chrome.tabs.create({
-            windowId: currentWindowId,
-            url: wTab.url,
-            active: false
-          });
-          return { tab, wTab };
+          try {
+            const tab = await chrome.tabs.create({
+              windowId: newWindowId,
+              url: wTab.url,
+              active: false
+            });
+            return { tab, wTab };
+          } catch (e) {
+            console.error(`Failed to create tab for URL ${wTab.url}:`, e);
+            return { tab: null, wTab };
+          }
         });
 
         const results = await Promise.all(tabPromises);
         results.forEach(r => {
-          if (r.tab.id) {
+          if (r.tab && r.tab.id) {
             allNewTabsInfo.push({ id: r.tab.id, info: r.wTab });
           }
         });
 
-        // We no longer close any tabs to prevent accidental data loss of user's active work or groups.
-
-        // Handle tab groups if supported
         if (chrome.tabGroups) {
           const groupsToCreate = new Map<string, { color?: string, tabIds: number[] }>();
           allNewTabsInfo.forEach(t => {
@@ -404,7 +421,7 @@ export const BookmarksView: React.FC = () => {
           for (const [groupName, groupData] of groupsToCreate.entries()) {
             const groupId = await chrome.tabs.group({
               tabIds: groupData.tabIds,
-              createProperties: { windowId: currentWindowId }
+              createProperties: { windowId: newWindowId }
             });
             await chrome.tabGroups.update(groupId, {
               title: groupName,
@@ -412,8 +429,21 @@ export const BookmarksView: React.FC = () => {
             });
           }
         }
+
+        const updatedTabs = workspace.tabs.map((wTab: any, i: number) => {
+           if (i === 0) return { ...wTab, tabId: firstTabChromeId };
+           return { ...wTab, tabId: results[i - 1]?.tab?.id };
+        });
+        updateWorkspaceTabs(workspace.id, updatedTabs);
+
+        // Release the lock after a 4-second timeout to allow tabs to initialize
+        setTimeout(() => {
+          setRestoringWorkspaceId(null);
+        }, 4000);
+
       } catch (err) {
         console.error('Failed to restore workspace:', err);
+        setRestoringWorkspaceId(null);
       }
     } else {
       // Mock alert and open tabs
@@ -611,7 +641,9 @@ export const BookmarksView: React.FC = () => {
                   onContextMenu={(e) => {
                     if (tab.id !== '1') {
                       e.preventDefault();
-                      setTabContextMenu({ x: e.clientX, y: e.clientY, tab });
+                      const x = Math.min(e.clientX, window.innerWidth - 200);
+                      const y = Math.min(e.clientY, window.innerHeight - 250);
+                      setTabContextMenu({ x, y, tab });
                     }
                   }}
                   className={`relative px-5 py-2 rounded-xl text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
@@ -770,7 +802,9 @@ export const BookmarksView: React.FC = () => {
                       key={workspace.id}
                       onContextMenu={(e) => {
                         e.preventDefault();
-                        setWorkspaceContextMenu({ x: e.clientX, y: e.clientY, workspace });
+                        const x = Math.min(e.clientX, window.innerWidth - 200);
+                        const y = Math.min(e.clientY, window.innerHeight - 250);
+                        setWorkspaceContextMenu({ x, y, workspace });
                       }}
                       className={`group relative overflow-hidden bg-black/20 hover:bg-black/40 backdrop-blur-2xl border rounded-[24px] p-5 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)] flex flex-col justify-between min-h-[220px] ${
                         isActive 
@@ -845,9 +879,21 @@ export const BookmarksView: React.FC = () => {
                               <div 
                                 key={tIdx}
                                 className="flex items-center justify-between gap-3 p-1.5 rounded-lg hover:bg-white/5 transition-colors group/item cursor-context-menu"
-                                onContextMenu={(e) => {
+                                onContextMenu={async (e) => {
                                   e.preventDefault();
-                                  setWorkspaceTabContextMenu({ x: e.clientX, y: e.clientY, workspace, tab, tIdx });
+                                  const x = Math.min(e.clientX, window.innerWidth - 200);
+                                  const y = Math.min(e.clientY, window.innerHeight - 250);
+                                  
+                                  if (typeof chrome !== 'undefined' && chrome.tabGroups && workspace.activeWindowId) {
+                                    try {
+                                      const groups = await chrome.tabGroups.query({ windowId: workspace.activeWindowId });
+                                      setLiveChromeGroups(groups);
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  }
+                                  
+                                  setWorkspaceTabContextMenu({ x, y, workspace, tab, tIdx });
                                 }}
                               >
                                 <div className="flex items-center gap-2 min-w-0 flex-1 pointer-events-none">
@@ -875,7 +921,9 @@ export const BookmarksView: React.FC = () => {
                                     onContextMenu={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      setWorkspaceGroupContextMenu({ x: e.clientX, y: e.clientY, workspace, groupTitle: tab.groupTitle, groupColor: tab.groupColor });
+                                      const x = Math.min(e.clientX, window.innerWidth - 200);
+                                      const y = Math.min(e.clientY, window.innerHeight - 250);
+                                      setWorkspaceGroupContextMenu({ x, y, workspace, groupTitle: tab.groupTitle, groupColor: tab.groupColor });
                                     }}
                                     className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border cursor-context-menu ${getGroupColorStyle(tab.groupColor)}`}
                                   >
@@ -947,7 +995,9 @@ export const BookmarksView: React.FC = () => {
                       }}
                       onContextMenu={(e, node) => {
                         e.preventDefault();
-                        setContextMenu({ x: e.clientX, y: e.clientY, node });
+                        const x = Math.min(e.clientX, window.innerWidth - 200);
+                        const y = Math.min(e.clientY, window.innerHeight - 250);
+                        setContextMenu({ x, y, node });
                       }}
                     />
                   </motion.div>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Santuario",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "A fully custom privacy-focused new tab dashboard.",
   "chrome_url_overrides": {
     "newtab": "index.html"
@@ -15,14 +15,10 @@
     "tabs",
     "tabGroups"
   ],
-  "background": {
-    "service_worker": "src/background.ts"
-  },
   "oauth2": {
     "client_id": "75741279554-kb6g88m7fmhrpbf9ko3u0jv1qj1t07as.apps.googleusercontent.com",
     "scopes": [
-      "https://www.googleapis.com/auth/tasks",
-      "https://www.googleapis.com/auth/calendar.readonly"
+      "https://www.googleapis.com/auth/tasks"
     ]
   },
   "host_permissions": [

@@ -46,8 +46,6 @@ export class SpotifyService {
     const scope = SPOTIFY_SCOPES.join(' ');
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&code_challenge_method=S256&code_challenge=${codeChallenge}&show_dialog=true`;
 
-    console.log('Redirect URI:', redirectUri);
-
     return new Promise((resolve, reject) => {
       chrome.identity.launchWebAuthFlow({
         url: authUrl,
@@ -92,10 +90,8 @@ export class SpotifyService {
     });
 
     const data = await response.json();
-    console.log('Exchange response:', data);
 
     if (data.access_token) {
-      console.log('Token received successfully (starts with):', data.access_token.substring(0, 10));
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token || '',
@@ -119,7 +115,6 @@ export class SpotifyService {
     });
 
     const data = await response.json();
-    console.log('Refresh response:', data);
 
     if (data.access_token) {
       return {

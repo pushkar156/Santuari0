@@ -118,7 +118,7 @@ To enable the full suite of features, you will need to obtain API keys/IDs from 
     - Select **Chrome extension** as the application type.
     - Enter your Extension ID (find it in `chrome://extensions`).
     - Copy the generated **Client ID**.
-    - Open `manifest.json` in the project root and replace `"YOUR_GOOGLE_CLIENT_ID_HERE..."` with your ID.
+    - Open `manifest.json` in the project root. It already contains a `client_id` value — **replace that entire value** with the Client ID you just copied. (The value committed in the repo is the project owner's and only works with their specific Extension ID, so you must use your own.)
     - Run `npm run build` and reload the extension.
 
 ### Loading the Extension

@@ -12,7 +12,6 @@ import { useViewStore, ViewType } from '../../store/viewStore';
 import { NavigationRail } from './NavigationRail';
 import PlaceholderView from '../views/PlaceholderView';
 import { TasksView } from '../views/TasksView';
-import { CalendarView } from '../views/CalendarView';
 import { BookmarksView } from '../views/BookmarksView';
 import { DriveView } from '../views/DriveView';
 import { QuickLinks } from '../widgets/QuickLinks/QuickLinks';
@@ -45,8 +44,6 @@ export const Dashboard = () => {
     switch (view) {
       case 'tasks':
         return <TasksView />;
-      case 'calendar':
-        return <CalendarView />;
       case 'bookmarks':
         return <BookmarksView />;
       case 'drive':

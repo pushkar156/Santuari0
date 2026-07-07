@@ -22,6 +22,8 @@ export interface Workspace {
 
 interface WorkspaceState {
   workspaces: Workspace[];
+  restoringWorkspaceId: string | null;
+  setRestoringWorkspaceId: (id: string | null) => void;
   addWorkspace: (workspace: Omit<Workspace, 'id' | 'createdAt' | 'activeWindowId'>) => void;
   renameWorkspace: (id: string, name: string) => void;
   deleteWorkspace: (id: string) => void;
@@ -47,6 +49,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set) => ({
       workspaces: [],
+      restoringWorkspaceId: null,
+      setRestoringWorkspaceId: (id) => set({ restoringWorkspaceId: id }),
       addWorkspace: (workspace) => set((state) => ({
         workspaces: [
           ...state.workspaces,
@@ -82,6 +86,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     {
       name: 'santuario-workspace-storage',
       storage: createJSONStorage(() => storageAdapter),
+      partialize: (state) => ({ workspaces: state.workspaces }),
     }
   )
 );

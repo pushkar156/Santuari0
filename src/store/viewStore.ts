@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewType = 'home' | 'tasks' | 'calendar' | 'bookmarks' | 'drive' | 'settings' | 'ovi' | 'background';
+export type ViewType = 'home' | 'tasks' | 'bookmarks' | 'drive' | 'settings' | 'ovi' | 'background';
 
 interface ViewState {
   activeView: ViewType;

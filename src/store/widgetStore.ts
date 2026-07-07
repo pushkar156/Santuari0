@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, StateStorage, createJSONStorage } from 'zustand/middleware';
 import { storage as extensionStorage } from '../lib/storage';
+import { sanitizeCustomCSS } from '../lib/cssSanitizer';
 
 export interface QuickLink {
   id: string;
@@ -123,7 +124,7 @@ export const useWidgetStore = create<WidgetState>()(
 
       updateSpotifyTrack: (track) => set({ spotifyTrack: track }),
 
-      setCustomCSS: (css) => set({ customCSS: css }),
+      setCustomCSS: (css) => set({ customCSS: sanitizeCustomCSS(css) }),
       setCustomBackground: (background) => 
         set((state) => {
           if (!background) return { customBackground: null };

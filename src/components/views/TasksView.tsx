@@ -1,19 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { RefreshCw, Loader2, Menu, StickyNote, Star, ChevronRight, ChevronDown, X, MoreVertical, Edit2, Check, LayoutGrid, Clock, CheckCheck, Plus, Trash2, ListTodo, Search, Command, Zap, Calendar, List } from 'lucide-react';
+import { RefreshCw, Loader2, StickyNote, Star, ChevronRight, ChevronDown, X, MoreVertical, Edit2, Check, LayoutGrid, Clock, CheckCheck, Plus, Trash2, ListTodo, Search, Command, Zap, Calendar, List } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useViewStore } from '../../store/viewStore';
-import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
-  useSensor, useSensors
-} from '@dnd-kit/core';
 import { GoogleTask, GoogleTaskList } from '../../services/googleTasks';
-import { 
-  SortableContext, 
-  verticalListSortingStrategy, 
-  useSortable,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useTasksStore } from '../../store/tasksStore';
 
 interface TaskNode extends GoogleTask { children: TaskNode[]; }
@@ -253,7 +242,7 @@ export const TasksView: React.FC = () => {
     visibleListIds, toggleListVisibility,
     showTodayColumn, setShowTodayColumn,
     showStarredColumn, setShowStarredColumn,
-    listOrder, setListOrder, error: storeError,
+    listOrder, error: storeError,
     isAuthenticated, lists, tasksByList, isLoading,
     focusedTaskId, setFocusedTaskId
   } = useTasksStore();
@@ -324,10 +313,7 @@ export const TasksView: React.FC = () => {
     ? Object.entries(tasksByList).find(([, tasks]) => tasks.some(t => t.id === selectedTask.id))?.[0] ?? null
     : null;
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+
 
 
 
@@ -453,40 +439,22 @@ export const TasksView: React.FC = () => {
             </div>
 
             <p className="text-[10px] font-black text-theme-muted uppercase tracking-widest px-4 mb-3">Lists</p>
-            <DndContext 
-              sensors={sensors} 
-              collisionDetection={closestCenter} 
-              onDragEnd={(e) => {
-                const { active, over } = e;
-                if (over && active.id !== over.id) {
-                  const oldIndex = listOrder.indexOf(active.id as string);
-                  const newIndex = listOrder.indexOf(over.id as string);
-                  const newOrder = [...listOrder];
-                  newOrder.splice(oldIndex, 1);
-                  newOrder.splice(newIndex, 0, active.id as string);
-                  setListOrder(newOrder);
-                }
-              }}
-            >
-              <SortableContext items={listOrder} strategy={verticalListSortingStrategy}>
-                <div className="space-y-1">
-                  {listOrder.map(listId => {
-                    const list = lists.find(l => l.id === listId);
-                    if (!list) return null;
-                    return (
-                      <SidebarListItem 
-                        key={list.id}
-                        list={list}
-                        isVisible={visibleListIds.includes(list.id)}
-                        onToggle={() => toggleListVisibility(list.id)}
-                        onRename={(t) => updateList(list.id, t)}
-                        onDelete={() => deleteList(list.id)}
-                      />
-                    );
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
+            <div className="space-y-1">
+              {listOrder.map(listId => {
+                const list = lists.find(l => l.id === listId);
+                if (!list) return null;
+                return (
+                  <SidebarListItem 
+                    key={list.id}
+                    list={list}
+                    isVisible={visibleListIds.includes(list.id)}
+                    onToggle={() => toggleListVisibility(list.id)}
+                    onRename={(t) => updateList(list.id, t)}
+                    onDelete={() => deleteList(list.id)}
+                  />
+                );
+              })}
+            </div>
 
             {isCreatingList && (
               <form onSubmit={handleCreateList} className="mt-2 px-2">
@@ -583,7 +551,6 @@ export const TasksView: React.FC = () => {
                   title="My Day"
                   tasks={todayTasks.filter(t => matchSearch(t, searchQuery))}
                   searchQuery={searchQuery}
-                  sensors={sensors}
                   selectedTaskId={selectedTaskId}
                   focusedTaskId={focusedTaskId}
                   setFocusedTaskId={setFocusedTaskId}
@@ -606,7 +573,6 @@ export const TasksView: React.FC = () => {
                   title="Starred"
                   tasks={starredTasks.filter(t => matchSearch(t, searchQuery))}
                   searchQuery={searchQuery}
-                  sensors={sensors}
                   selectedTaskId={selectedTaskId}
                   focusedTaskId={focusedTaskId}
                   setFocusedTaskId={setFocusedTaskId}
@@ -635,7 +601,6 @@ export const TasksView: React.FC = () => {
                     title={list.title}
                     tasks={filteredTasks}
                     searchQuery={searchQuery}
-                    sensors={sensors}
                     selectedTaskId={selectedTaskId}
                     focusedTaskId={focusedTaskId}
                     setFocusedTaskId={setFocusedTaskId}
@@ -796,14 +761,6 @@ const SidebarListItem: React.FC<{
 }> = ({ list, isVisible, onToggle, onRename, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(list.title);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: list.id });
-  
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-    position: 'relative' as const,
-  };
 
   const handleRename = (e: React.FormEvent) => {
     e.preventDefault();
@@ -812,13 +769,10 @@ const SidebarListItem: React.FC<{
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="group flex items-center pr-2">
-      <div {...attributes} {...listeners} className="p-2 cursor-grab active:cursor-grabbing text-theme-muted opacity-0 group-hover:opacity-100 transition-all">
-        <Menu size={12} className="rotate-90" />
-      </div>
+    <div className="group flex items-center pr-2">
       <button
         onClick={onToggle}
-        className={`flex-1 min-w-0 flex items-center justify-between px-3 py-2.5 rounded-[18px] transition-all ${isVisible ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
+        className={`flex-1 min-w-0 flex items-center justify-between px-4 py-3 rounded-[18px] transition-all ${isVisible ? 'bg-theme-bg-accent/10 text-theme-bg-accent' : 'text-theme-text hover:bg-theme-bg-accent/5'}`}
       >
         <div className="flex items-center gap-3 w-full min-w-0">
           <div className={`flex-shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all ${isVisible ? 'bg-theme-bg-accent border-theme-bg-accent shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'border-theme-border'}`}>
@@ -868,7 +822,7 @@ const HighlightText: React.FC<{ text: string; query?: string }> = ({ text, query
 // ─── Column Component ────────────────────────────────────────────────────────
 const TaskColumn: React.FC<{
   listId: string; title: string; tasks: GoogleTask[];
-  sensors: any; selectedTaskId: string | null; focusedTaskId: string | null;
+  selectedTaskId: string | null; focusedTaskId: string | null;
   setFocusedTaskId: (id: string | null) => void;
   onSelect: (id: string) => void; onToggle: (id: string, x?: number, y?: number) => void;
   onRemove: (id: string) => void; onUpdate: (id: string, u: Partial<GoogleTask>) => void;
@@ -878,7 +832,7 @@ const TaskColumn: React.FC<{
   onDeleteList: (id: string) => void;
   searchQuery?: string;
 }> = ({
-  listId, title, tasks, sensors,
+  listId, title, tasks,
   selectedTaskId, focusedTaskId, setFocusedTaskId,
   onSelect, onToggle, onRemove, onUpdate, onAddTask, onMoveTask,
   onClearCompleted, onRenameList, onDeleteList, searchQuery
@@ -1122,80 +1076,58 @@ const TaskColumn: React.FC<{
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6 space-y-0 relative">
-        <DndContext 
-          sensors={sensors} 
-          collisionDetection={closestCenter} 
-          onDragEnd={(e) => {
-            const { active, over } = e;
-            if (!over || active.id === over.id) return;
-            const oldIndex = orderedIds.indexOf(active.id as string);
-            const newIndex = orderedIds.indexOf(over.id as string);
-            if (oldIndex === -1 || newIndex === -1) return;
-            // Immediately reorder locally for smooth UX
-            const newOrder = [...orderedIds];
-            newOrder.splice(oldIndex, 1);
-            newOrder.splice(newIndex, 0, active.id as string);
-            setOrderedIds(newOrder);
-            // Sync to API: move task before the one now after it
-            const previousId = newIndex > 0 ? newOrder[newIndex - 1] : undefined;
-            onMoveTask(active.id as string, undefined, previousId);
-          }}
-        >
-          <SortableContext items={flattenedIds} strategy={verticalListSortingStrategy}>
-            <AnimatePresence mode="popLayout" initial={false}>
-              {flattenedTasks.length === 0 && !searchQuery ? (
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }}
-                  className="py-12 flex flex-col items-center justify-center text-center opacity-30"
-                >
-                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-theme-muted mb-3" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-theme-muted">No active tasks</p>
-                </motion.div>
-              ) : (
-                flattenedTasks.map(({ node, depth }) => (
-                  <TaskItem
-                    key={node.id}
-                    task={node}
-                    depth={depth}
-                    isSelected={selectedTaskId === node.id}
-                    focusedTaskId={focusedTaskId}
-                    setFocusedTaskId={setFocusedTaskId}
-                    onToggle={onToggle}
-                    onRemove={onRemove}
-                    onSelect={onSelect}
-                    onIndent={(id) => {
-                      const idx = flattenedIds.indexOf(id);
-                      if (idx > 0) onMoveTask(id, flattenedIds[idx-1]);
-                    }}
-                    onOutdent={(id) => {
-                      const task = tasks.find(t => t.id === id);
-                      if (task?.parent) onMoveTask(id, undefined, task.parent);
-                    }}
-                    onUpdateTask={onUpdate}
-                    onEnter={(id) => onAddTask('', undefined, id)}
-                    onBackspace={(id, title) => { 
-                      if (title === '') {
-                        const idx = flattenedIds.indexOf(id);
-                        if (idx > 0) setFocusedTaskId(flattenedIds[idx-1]);
-                        onRemove(id); 
-                      }
-                    }}
-                    onArrowUp={(id) => {
-                      const idx = flattenedIds.indexOf(id);
-                      if (idx > 0) setFocusedTaskId(flattenedIds[idx-1]);
-                    }}
-                    onArrowDown={(id) => {
-                      const idx = flattenedIds.indexOf(id);
-                      if (idx < flattenedIds.length - 1) setFocusedTaskId(flattenedIds[idx+1]);
-                    }}
-                    searchQuery={searchQuery}
-                  />
-                ))
-              )}
-            </AnimatePresence>
-          </SortableContext>
-        </DndContext>
+        <AnimatePresence mode="popLayout" initial={false}>
+          {flattenedTasks.length === 0 && !searchQuery ? (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }}
+              className="py-12 flex flex-col items-center justify-center text-center opacity-30"
+            >
+              <div className="w-12 h-12 rounded-full border-2 border-dashed border-theme-muted mb-3" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-theme-muted">No active tasks</p>
+            </motion.div>
+          ) : (
+            flattenedTasks.map(({ node, depth }) => (
+              <TaskItem
+                key={node.id}
+                task={node}
+                depth={depth}
+                isSelected={selectedTaskId === node.id}
+                focusedTaskId={focusedTaskId}
+                setFocusedTaskId={setFocusedTaskId}
+                onToggle={onToggle}
+                onRemove={onRemove}
+                onSelect={onSelect}
+                onIndent={(id) => {
+                  const idx = flattenedIds.indexOf(id);
+                  if (idx > 0) onMoveTask(id, flattenedIds[idx-1]);
+                }}
+                onOutdent={(id) => {
+                  const task = tasks.find(t => t.id === id);
+                  if (task?.parent) onMoveTask(id, undefined, task.parent);
+                }}
+                onUpdateTask={onUpdate}
+                onEnter={(id) => onAddTask('', undefined, id)}
+                onBackspace={(id, title) => { 
+                  if (title === '') {
+                    const idx = flattenedIds.indexOf(id);
+                    if (idx > 0) setFocusedTaskId(flattenedIds[idx-1]);
+                    onRemove(id); 
+                  }
+                }}
+                onArrowUp={(id) => {
+                  const idx = flattenedIds.indexOf(id);
+                  if (idx > 0) setFocusedTaskId(flattenedIds[idx-1]);
+                }}
+                onArrowDown={(id) => {
+                  const idx = flattenedIds.indexOf(id);
+                  if (idx < flattenedIds.length - 1) setFocusedTaskId(flattenedIds[idx+1]);
+                }}
+                searchQuery={searchQuery}
+              />
+            ))
+          )}
+        </AnimatePresence>
 
         {completedTasks.length > 0 && (
           <div className="pt-4 border-t border-theme-border/20 mt-4">
@@ -1280,13 +1212,8 @@ const TaskItem: React.FC<{
     }
   }, [task.title]);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
-  
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
     marginLeft: `${depth * 24}px`,
-    zIndex: isDragging ? 50 : 1,
     position: 'relative' as const,
   };
 
@@ -1302,7 +1229,7 @@ const TaskItem: React.FC<{
   const isOverdue = !isCompleted && task.due && task.due.split('T')[0] < new Date().toISOString().split('T')[0];
 
   return (
-    <div ref={setNodeRef} style={style} className="group/item outline-none relative">
+    <div style={style} className="group/item outline-none relative">
       {depth > 0 && (
         <div className="absolute left-[-12px] top-0 bottom-0 w-px bg-theme-border/30" style={{ left: `-${12}px` }} />
       )}
@@ -1315,7 +1242,7 @@ const TaskItem: React.FC<{
           isCompleted ? 'opacity-40 grayscale-[0.5]' :
           isSelected ? 'bg-theme-bg-accent/[0.06] ring-2 ring-inset ring-theme-bg-accent/20 z-10' :
           'hover:bg-theme-bg-accent/[0.04]'
-        } ${isDragging ? 'opacity-50 shadow-2xl scale-[1.02] z-50 ring-2 ring-theme-bg-accent/50' : ''}`}
+        }`}
         onClick={() => { setFocusedTaskId(task.id); onSelect(task.id); }}
       >
         {/* Priority Pip */}
@@ -1325,9 +1252,6 @@ const TaskItem: React.FC<{
         {task.starred && !isCompleted && (
           <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-amber-400 rounded-full z-20" />
         )}
-        <div {...attributes} {...listeners} className="mt-1.5 cursor-grab active:cursor-grabbing text-theme-muted opacity-0 group-hover/item:opacity-100 transition-all flex-shrink-0">
-          <Menu size={12} className="rotate-90" />
-        </div>
 
         <motion.button
           onClick={e => { e.stopPropagation(); onToggle(task.id, e.clientX, e.clientY); }}

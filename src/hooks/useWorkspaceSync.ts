@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 export const useWorkspaceSync = () => {
@@ -6,7 +6,8 @@ export const useWorkspaceSync = () => {
     workspaces, 
     updateWorkspaceTabs, 
     setWorkspaceActiveSession, 
-    clearAllActiveSessions 
+    clearAllActiveSessions,
+    restoringWorkspaceId
   } = useWorkspaceStore();
 
   const workspacesRef = useRef(workspaces);
@@ -14,6 +15,62 @@ export const useWorkspaceSync = () => {
   useEffect(() => {
     workspacesRef.current = workspaces;
   }, [workspaces]);
+
+  const syncWindowTabs = useCallback(async (windowId: number) => {
+    const activeWorkspace = workspacesRef.current.find(w => w.activeWindowId === windowId);
+    if (!activeWorkspace) return;
+
+    // Safeguard: Do not sync while restoring this specific workspace
+    const restoringId = useWorkspaceStore.getState().restoringWorkspaceId;
+    if (restoringId === activeWorkspace.id) {
+      return;
+    }
+
+    try {
+      const tabs = await chrome.tabs.query({ windowId });
+      
+      let groups: chrome.tabGroups.TabGroup[] = [];
+      if (chrome.tabGroups) {
+        groups = await chrome.tabGroups.query({ windowId });
+      }
+      
+      const groupsMap = new Map<number, chrome.tabGroups.TabGroup>();
+      groups.forEach(g => {
+        groupsMap.set(g.id, g);
+      });
+
+      // Filter out Santuario instances and blank new tabs
+      const filteredTabs = tabs.filter(tab => {
+        if (!tab.url) return false;
+        const isSantuario = tab.url.includes(chrome.runtime.id) || tab.url.includes('localhost:5173');
+        const isNewTab = tab.url === 'chrome://newtab/';
+        return !isSantuario && !isNewTab;
+      });
+
+      if (filteredTabs.length === 0) {
+        // Safeguard: Deactivate session instead of wiping saved tabs
+        setWorkspaceActiveSession(activeWorkspace.id, null);
+        return;
+      }
+
+      const workspaceTabs = filteredTabs.map(tab => {
+        const group = tab.groupId !== undefined && tab.groupId !== -1 ? groupsMap.get(tab.groupId) : undefined;
+        return {
+          url: tab.url || '',
+          title: tab.title || '',
+          favIconUrl: tab.favIconUrl || '',
+          groupTitle: group?.title || '',
+          groupColor: group?.color || '',
+          tabId: tab.id,
+          groupId: group?.id,
+        };
+      });
+
+      updateWorkspaceTabs(activeWorkspace.id, workspaceTabs);
+    } catch (err) {
+      console.error('Failed to sync workspace tabs:', err);
+    }
+  }, [updateWorkspaceTabs, setWorkspaceActiveSession]);
 
   // Validate active sessions on mount
   useEffect(() => {
@@ -34,52 +91,9 @@ export const useWorkspaceSync = () => {
     }
   }, []);
 
+  // Listen to tab and group events
   useEffect(() => {
     if (typeof chrome === 'undefined' || !chrome.tabs) return;
-
-    const syncWindowTabs = async (windowId: number) => {
-      const activeWorkspace = workspacesRef.current.find(w => w.activeWindowId === windowId);
-      if (!activeWorkspace) return;
-
-      try {
-        const tabs = await chrome.tabs.query({ windowId });
-        
-        let groups: chrome.tabGroups.TabGroup[] = [];
-        if (chrome.tabGroups) {
-          groups = await chrome.tabGroups.query({ windowId });
-        }
-        
-        const groupsMap = new Map<number, chrome.tabGroups.TabGroup>();
-        groups.forEach(g => {
-          groupsMap.set(g.id, g);
-        });
-
-        // Filter out Santuario instances and blank new tabs
-        const filteredTabs = tabs.filter(tab => {
-          if (!tab.url) return false;
-          const isSantuario = tab.url.includes(chrome.runtime.id) || tab.url.includes('localhost:5173');
-          const isNewTab = tab.url === 'chrome://newtab/';
-          return !isSantuario && !isNewTab;
-        });
-
-        const workspaceTabs = filteredTabs.map(tab => {
-          const group = tab.groupId !== undefined && tab.groupId !== -1 ? groupsMap.get(tab.groupId) : undefined;
-          return {
-            url: tab.url || '',
-            title: tab.title || '',
-            favIconUrl: tab.favIconUrl || '',
-            groupTitle: group?.title || '',
-            groupColor: group?.color || '',
-            tabId: tab.id,
-            groupId: group?.id,
-          };
-        });
-
-        updateWorkspaceTabs(activeWorkspace.id, workspaceTabs);
-      } catch (err) {
-        console.error('Failed to sync workspace tabs:', err);
-      }
-    };
 
     const handleTabChange = (_tabId: number, changeInfo: any, tab: chrome.tabs.Tab) => {
       if (tab.windowId && (changeInfo.url || changeInfo.title)) {
@@ -161,5 +175,20 @@ export const useWorkspaceSync = () => {
         chrome.windows.onRemoved.removeListener(handleWindowRemoved);
       }
     };
-  }, [updateWorkspaceTabs, setWorkspaceActiveSession]);
+  }, [syncWindowTabs]);
+
+  // Sync on finished restoring transition
+  const prevRestoringId = useRef(restoringWorkspaceId);
+  useEffect(() => {
+    if (prevRestoringId.current && !restoringWorkspaceId) {
+      if (typeof chrome !== 'undefined' && chrome.windows) {
+        workspacesRef.current.forEach(async (w) => {
+          if (w.activeWindowId) {
+            syncWindowTabs(w.activeWindowId);
+          }
+        });
+      }
+    }
+    prevRestoringId.current = restoringWorkspaceId;
+  }, [restoringWorkspaceId, syncWindowTabs]);
 };
