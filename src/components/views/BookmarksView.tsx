@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronRight, ChevronLeft, Edit2, Link, FolderPlus, BookmarkPlus, X, List, Plus, Layers, Play, Save, ExternalLink } from 'lucide-react';
+import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronLeft, Edit2, Link, FolderPlus, BookmarkPlus, X, List, Plus, Layers, Play, Save, ExternalLink } from 'lucide-react';
 import { useBookmarksStore, BookmarkNode } from '../../store/bookmarksStore';
 import { useWidgetStore } from '../../store/widgetStore';
 import { useViewStore } from '../../store/viewStore';
@@ -106,7 +106,7 @@ export const BookmarksView: React.FC = () => {
   const [modalType, setModalType] = useState<'bookmark' | 'folder' | 'tab' | 'renameTab' | 'workspace' | 'renameWorkspace' | 'renameGroup' | 'groupColor' | 'newGroup'>('bookmark');
   const [editingNode, setEditingNode] = useState<BookmarkNode | null>(null);
   const [editingTab, setEditingTab] = useState<{ id: string; name: string } | null>(null);
-  const [formData, setFormData] = useState({ title: '', url: '', groupColor: 'grey' });
+  const [formData, setFormData] = useState<{ title: string; url: string; groupColor: string; parentId?: string }>({ title: '', url: '', groupColor: 'grey', parentId: '' });
 
   // Workspace Specific States
   const [capturedTabs, setCapturedTabs] = useState<any[]>([]);
@@ -170,6 +170,44 @@ export const BookmarksView: React.FC = () => {
       };
     }
   }, []);
+
+  // Dynamically sync native folders (Other Bookmarks, Mobile Bookmarks) to tabs
+  useEffect(() => {
+    if (tree.length > 0) {
+      const rootNode = tree[0];
+      if (rootNode && rootNode.children) {
+        const nativeFolders = rootNode.children.filter(child => !child.url);
+        const existingIds = new Set(bookmarkTabs.map(t => t.id));
+        
+        nativeFolders.forEach(folder => {
+          if (!existingIds.has(folder.id)) {
+            let tabName = folder.title;
+            if (folder.id === '1') tabName = 'Home';
+            else if (folder.id === '2') tabName = 'Other Bookmarks';
+            else if (folder.id === '3') tabName = 'Mobile Bookmarks';
+            addBookmarkTab({ id: folder.id, name: tabName });
+          }
+        });
+      }
+    }
+  }, [tree, bookmarkTabs, addBookmarkTab]);
+
+  const allFolders = useMemo(() => {
+    const foldersList: { id: string; title: string }[] = [];
+    const traverse = (node: BookmarkNode, path = '') => {
+      if (!node.url && node.id) {
+        const fullTitle = path ? `${path} / ${node.title}` : node.title;
+        if (node.id !== '0') {
+          foldersList.push({ id: node.id, title: fullTitle });
+        }
+        if (node.children) {
+          node.children.forEach(child => traverse(child, fullTitle));
+        }
+      }
+    };
+    tree.forEach(node => traverse(node));
+    return foldersList;
+  }, [tree]);
 
   // Close context menu on outside click
   useEffect(() => {
@@ -293,28 +331,28 @@ export const BookmarksView: React.FC = () => {
   const openAddModal = (type: 'bookmark' | 'folder') => {
     setModalType(type);
     setEditingNode(null);
-    setFormData({ title: '', url: '', groupColor: 'grey' });
+    setFormData({ title: '', url: '', groupColor: 'grey', parentId: activeFolderId || '1' });
     setIsModalOpen(true);
   };
 
   const openEditModal = (node: BookmarkNode) => {
     setModalType(node.url ? 'bookmark' : 'folder');
     setEditingNode(node);
-    setFormData({ title: node.title, url: node.url || '', groupColor: 'grey' });
+    setFormData({ title: node.title, url: node.url || '', groupColor: 'grey', parentId: node.parentId || '1' });
     setIsModalOpen(true);
   };
 
   const openAddTabModal = () => {
     setModalType('tab');
     setEditingTab(null);
-    setFormData({ title: '', url: '', groupColor: 'grey' });
+    setFormData({ title: '', url: '', groupColor: 'grey', parentId: '' });
     setIsModalOpen(true);
   };
 
   const openRenameTabModal = (tab: { id: string; name: string }) => {
     setModalType('renameTab');
     setEditingTab(tab);
-    setFormData({ title: tab.name, url: '', groupColor: 'grey' });
+    setFormData({ title: tab.name, url: '', groupColor: 'grey', parentId: '' });
     setIsModalOpen(true);
   };
 
@@ -685,13 +723,16 @@ export const BookmarksView: React.FC = () => {
         pushGroupRenameToChrome(workspace, selectedGroupName, selectedGroupName, formData.groupColor);
       }
     } else {
-      const parentId = activeFolderId || '1';
+      const parentId = formData.parentId || activeFolderId || '1';
       
       if (editingNode) {
         await updateBookmark(editingNode.id, {
           title: formData.title,
           url: modalType === 'bookmark' ? formData.url : undefined
         });
+        if (editingNode.parentId && editingNode.parentId !== parentId) {
+          await moveBookmark(editingNode.id, { parentId });
+        }
       } else {
         await createBookmark({
           parentId,
@@ -1507,16 +1548,32 @@ export const BookmarksView: React.FC = () => {
                 )}
                 
                 {modalType === 'bookmark' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">URL</label>
-                    <input
-                      type="text"
-                      value={formData.url}
-                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-colors"
-                      placeholder="https://..."
-                    />
-                  </div>
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Folder / List</label>
+                      <select
+                        value={formData.parentId}
+                        onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
+                        className="w-full bg-[#2a2a2a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors text-sm"
+                      >
+                        {allFolders.map(folder => (
+                          <option key={folder.id} value={folder.id} className="bg-[#1a1a1a] text-white">
+                            {folder.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">URL</label>
+                      <input
+                        type="text"
+                        value={formData.url}
+                        onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-colors"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </>
                 )}
                 
                 <div className="pt-4 flex gap-3">
@@ -1626,8 +1683,6 @@ const FolderCard = ({
   const bookmarks = folder.children?.filter(n => n.url) || [];
   const subfolders = folder.children?.filter(n => !n.url) || [];
   
-  if (bookmarks.length === 0 && subfolders.length === 0) return null;
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1674,12 +1729,7 @@ const FolderCard = ({
       <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors duration-500 pointer-events-none" />
       
       <div 
-        className="flex items-center justify-between mb-4 px-1 relative z-10 cursor-pointer"
-        onClick={() => {
-          if (!(folder as any).isMain) {
-            onNavigate(folder.id);
-          }
-        }}
+        className="flex items-center justify-between mb-4 px-1 relative z-10"
         onContextMenu={(e) => {
           if (!(folder as any).isMain) {
             e.preventDefault();
@@ -1688,18 +1738,18 @@ const FolderCard = ({
           }
         }}
       >
-        <HighlightText text={folder.title} query={searchQuery} className="text-[15px] font-semibold text-white/90 tracking-wide hover:text-white transition-colors" />
-        {!(folder as any).isMain && (
-          <button className="text-white/30 hover:text-white/80 transition-colors" onClick={(e) => {
-            e.stopPropagation();
-            onNavigate(folder.id);
-          }}>
-            <ChevronRight size={16} />
-          </button>
-        )}
+        <HighlightText text={folder.title} query={searchQuery} className="text-[15px] font-semibold text-white/90 tracking-wide" />
       </div>
 
       <div className={`flex flex-col space-y-0.5 relative z-10 ${viewMode === 'list' ? 'flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 space-y-0' : ''}`}>
+        {bookmarks.length === 0 && subfolders.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-8 text-white/20 border border-dashed border-white/5 rounded-2xl relative z-10">
+            <Bookmark size={16} className="mb-1.5 opacity-40" />
+            <span className="text-[11px] font-semibold">Empty Folder</span>
+            <span className="text-[9px] opacity-50">Drag links here to save</span>
+          </div>
+        )}
+        
         {bookmarks.slice(0, viewMode === 'list' ? 99 : 12).map(bm => (
           <div key={bm.id} className="relative">
             {dragOverItemId === bm.id && dropPosition && (
