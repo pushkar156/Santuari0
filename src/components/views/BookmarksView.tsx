@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronLeft, Edit2, Link, FolderPlus, BookmarkPlus, X, List, Plus, Layers, Play, Save, ExternalLink } from 'lucide-react';
+import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronLeft, Edit2, Link, FolderPlus, X, List, Plus, Layers, Play, Save, ExternalLink } from 'lucide-react';
 import { useBookmarksStore, BookmarkNode } from '../../store/bookmarksStore';
 import { useWidgetStore } from '../../store/widgetStore';
 import { useViewStore } from '../../store/viewStore';
@@ -185,7 +185,7 @@ export const BookmarksView: React.FC = () => {
           if (!existingIds.has(folder.id)) {
             let tabName = folder.title;
             if (folder.id === '1') tabName = 'Home';
-            else if (folder.id === '2') tabName = 'Other Bookmarks';
+            else if (folder.id === '2') tabName = 'All Bookmarks';
             else if (folder.id === '3') tabName = 'Mobile Bookmarks';
             addBookmarkTab({ id: folder.id, name: tabName });
           }
@@ -237,7 +237,24 @@ export const BookmarksView: React.FC = () => {
 
   const activeFolder = useMemo(() => {
     if (!activeFolderId) return tree.length > 0 ? tree[0] : null;
-    return findNode(tree, activeFolderId);
+    const folder = findNode(tree, activeFolderId);
+    if (folder && folder.id === '2') {
+      const bookmarksBarNode = findNode(tree, '1');
+      if (bookmarksBarNode) {
+        const children = folder.children ? [...folder.children] : [];
+        if (!children.some(child => child.id === '1')) {
+          children.push({
+            ...bookmarksBarNode,
+            title: 'Bookmarks bar'
+          });
+        }
+        return {
+          ...folder,
+          children
+        };
+      }
+    }
+    return folder;
   }, [tree, activeFolderId]);
 
   const handleTabClick = (tabId: string) => {
@@ -368,10 +385,10 @@ export const BookmarksView: React.FC = () => {
     return cards;
   }, [activeFolder, searchQuery, globalSort]);
 
-  const openAddModal = (type: 'bookmark' | 'folder') => {
+  const openAddModal = (type: 'bookmark' | 'folder', parentId?: string) => {
     setModalType(type);
     setEditingNode(null);
-    setFormData({ title: '', url: '', groupColor: 'grey', parentId: activeFolderId || '1' });
+    setFormData({ title: '', url: '', groupColor: 'grey', parentId: parentId || activeFolderId || '1' });
     setIsModalOpen(true);
   };
 
@@ -701,7 +718,7 @@ export const BookmarksView: React.FC = () => {
       try {
         if (typeof chrome !== 'undefined' && chrome.bookmarks) {
           const newFolder = await chrome.bookmarks.create({
-            parentId: '1',
+            parentId: '2',
             title: formData.title
           });
           // Refresh tree to sync new folder before adding tab to store
@@ -799,39 +816,48 @@ export const BookmarksView: React.FC = () => {
       <header className="flex items-center justify-between mb-8 pl-2 pr-24 relative z-20">
         <div className="flex items-center gap-3">
           <div className="flex bg-black/20 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 shadow-lg relative gap-1">
-            {bookmarkTabs.map((tab) => {
-              const isActive = activeTabId === tab.id;
-              return (
-                <button 
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
-                  onContextMenu={(e) => {
-                    if (tab.id !== '1') {
-                      e.preventDefault();
-                      const x = Math.min(e.clientX, window.innerWidth - 200);
-                      const y = Math.min(e.clientY, window.innerHeight - 250);
-                      setTabContextMenu({ x, y, tab });
-                    }
-                  }}
-                  className={`relative px-5 py-2 rounded-xl text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
-                    isActive 
-                      ? 'text-white' 
-                      : 'text-white/50 hover:text-white/90 hover:bg-white/5'
-                  }`}
-                >
-                  {/* Shared Layout Active Background Pill */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTabPill"
-                      className="absolute inset-0 bg-white/15 rounded-xl shadow-sm z-0"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  
-                  <span className="relative z-10">{tab.name}</span>
-                </button>
-              );
-            })}
+            {(() => {
+              const homeTab = bookmarkTabs.find(t => t.id === '1');
+              const allBookmarksTab = bookmarkTabs.find(t => t.id === '2');
+              const customTabs = bookmarkTabs.filter(t => t.id !== '1' && t.id !== '2');
+              const orderedTabs = [homeTab, ...customTabs, allBookmarksTab].filter(Boolean) as typeof bookmarkTabs;
+              
+              return orderedTabs.map((tab) => {
+                const isActive = activeTabId === tab.id;
+                return (
+                  <button 
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    onContextMenu={(e) => {
+                      if (tab.id !== '1') {
+                        e.preventDefault();
+                        const x = Math.min(e.clientX, window.innerWidth - 200);
+                        const y = Math.min(e.clientY, window.innerHeight - 250);
+                        setTabContextMenu({ x, y, tab });
+                      }
+                    }}
+                    className={`relative px-5 py-2 rounded-xl text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      isActive 
+                        ? 'text-white' 
+                        : 'text-white/50 hover:text-white/90 hover:bg-white/5'
+                    }`}
+                  >
+                    {/* Shared Layout Active Background Pill */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeTabPill"
+                        className="absolute inset-0 bg-white/15 rounded-xl shadow-sm z-0"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    
+                    <span className="relative z-10">
+                      {tab.id === '1' ? 'Home' : tab.id === '2' ? 'All Bookmarks' : tab.name}
+                    </span>
+                  </button>
+                );
+              });
+            })()}
             
             {/* Permanent Workspaces Tab */}
             <button
@@ -927,14 +953,7 @@ export const BookmarksView: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-black/20 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl shadow-lg">
-              <button 
-                onClick={() => openAddModal('bookmark')}
-                className="w-9 h-9 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-all hover:scale-105 active:scale-95 group relative"
-              >
-                <BookmarkPlus size={16} />
-                <div className="absolute top-full mt-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">Add Bookmark</div>
-              </button>
+             <div className="flex items-center gap-2 bg-black/20 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl shadow-lg">
               <button 
                 onClick={() => openAddModal('folder')}
                 className="w-9 h-9 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-all hover:scale-105 active:scale-95 group relative"
@@ -1184,6 +1203,7 @@ export const BookmarksView: React.FC = () => {
                       moveBookmark={moveBookmark}
                       searchQuery={searchQuery}
                       innerSort={innerSort}
+                      activeTabId={activeTabId}
                     />
                   </motion.div>
                 ))}
@@ -1232,6 +1252,16 @@ export const BookmarksView: React.FC = () => {
                   <ExternalLink size={14} /> Open All in New Window
                 </button>
                 <div className="h-px bg-white/10 my-1 mx-2" />
+                <button 
+                  onClick={() => {
+                    openAddModal('folder', contextMenu.node.id);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                >
+                  <FolderPlus size={14} /> Add Folder
+                </button>
+                <div className="h-px bg-white/10 my-1 mx-2" />
               </>
             ) : (
               <>
@@ -1264,7 +1294,7 @@ export const BookmarksView: React.FC = () => {
               }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
             >
-              <Edit2 size={14} /> Edit {contextMenu.node.url ? 'Bookmark' : 'Folder'}
+              <Edit2 size={14} /> {contextMenu.node.url ? 'Edit Bookmark' : 'Rename'}
             </button>
             <button 
               onClick={() => handleDelete(contextMenu.node.id)}
@@ -1735,7 +1765,8 @@ const FolderCard = ({
   onContextMenu,
   moveBookmark,
   searchQuery,
-  innerSort
+  innerSort,
+  activeTabId
 }: { 
   folder: BookmarkNode, 
   isBlurred: boolean,
@@ -1744,14 +1775,21 @@ const FolderCard = ({
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void,
   moveBookmark: (id: string, destination: { parentId: string, index?: number }) => Promise<void>,
   searchQuery?: string,
-  innerSort: 'default' | 'alpha' | 'date-newest' | 'date-oldest'
+  innerSort: 'default' | 'alpha' | 'date-newest' | 'date-oldest',
+  activeTabId?: string
 }) => {
+  const { bookmarkTabConnections, connectBookmarkTab, bookmarkTabs } = useWidgetStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
+  const [showConnectMenu, setShowConnectMenu] = useState(false);
 
   const bookmarks = folder.children?.filter(n => n.url) || [];
   const subfolders = folder.children?.filter(n => !n.url) || [];
+
+  const connectedTabId = bookmarkTabConnections?.[folder.id];
+  const isConnected = !!connectedTabId;
+  const connectableTabs = bookmarkTabs.filter(t => t.id !== '2');
 
   const sortedBookmarks = useMemo(() => {
     const copy = [...bookmarks];
@@ -1776,7 +1814,29 @@ const FolderCard = ({
     }
     return copy;
   }, [subfolders, innerSort]);
-  
+
+  const handleConnect = (tabId: string) => {
+    const targetTab = bookmarkTabs.find(t => t.id === tabId);
+    if (!targetTab) return;
+
+    let isMatched = false;
+    const folderTitle = folder.title.trim().toLowerCase();
+    const tabName = targetTab.name.trim().toLowerCase();
+
+    if (tabId === '1') {
+      isMatched = folderTitle === 'bookmarks bar' || folderTitle === 'home';
+    } else {
+      isMatched = folderTitle === tabName || folder.id === tabId;
+    }
+
+    if (isMatched) {
+      connectBookmarkTab(folder.id, tabId);
+      alert('Verification successful: Connected successfully!');
+    } else {
+      alert(`Verification failed: Folder "${folder.title}" does not match tab "${targetTab.name}".`);
+    }
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1809,9 +1869,10 @@ const FolderCard = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`group relative overflow-hidden bg-black/20 hover:bg-black/40 backdrop-blur-2xl border rounded-[24px] p-5 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)] ${
+      className={`group relative bg-black/20 hover:bg-black/40 backdrop-blur-2xl border rounded-[24px] p-5 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)] ${
         isDragOver ? 'border-theme-bg-accent/40 bg-theme-bg-accent/5 shadow-[0_0_25px_rgba(255,255,255,0.1)]' : 'border-white/5 hover:border-white/15'
       } ${viewMode === 'list' ? 'flex flex-col md:flex-row gap-6' : ''}`}
+      style={{ zIndex: showConnectMenu ? 50 : 10 }}
       onContextMenu={(e) => {
         if ((folder as any).isMain) {
           e.preventDefault();
@@ -1820,10 +1881,12 @@ const FolderCard = ({
       }}
     >
       {/* Decorative gradient blob inside card */}
-      <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors duration-500 pointer-events-none" />
+      <div className="absolute inset-0 rounded-[24px] overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors duration-500" />
+      </div>
       
       <div 
-        className="flex items-center justify-between mb-4 px-1 relative z-10"
+        className={`flex items-center justify-between mb-4 px-1 relative ${showConnectMenu ? 'z-30' : 'z-20'}`}
         onContextMenu={(e) => {
           if (!(folder as any).isMain) {
             e.preventDefault();
@@ -1832,7 +1895,73 @@ const FolderCard = ({
           }
         }}
       >
-        <HighlightText text={folder.title} query={searchQuery} className="text-[15px] font-semibold text-white/90 tracking-wide" />
+        <div 
+          className={`flex items-center gap-2 ${isConnected && activeTabId === '2' ? 'cursor-pointer group/title hover:opacity-80' : ''}`}
+          onClick={() => {
+            if (isConnected && activeTabId === '2') {
+              onNavigate(connectedTabId);
+            }
+          }}
+        >
+          <HighlightText 
+            text={folder.title} 
+            query={searchQuery} 
+            className={`text-[15px] font-semibold text-white/90 tracking-wide transition-colors ${isConnected && activeTabId === '2' ? 'group-hover/title:text-theme-bg-accent' : ''}`} 
+          />
+          {isConnected && activeTabId === '2' && (
+            <span className="text-[9px] bg-theme-bg-accent/15 text-theme-bg-accent px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+              {connectedTabId === '1' ? 'Home' : bookmarkTabs.find(t => t.id === connectedTabId)?.name || 'Linked'}
+            </span>
+          )}
+        </div>
+
+        {activeTabId === '2' && !(folder as any).isMain && (
+          <div className="relative">
+            <button
+              onClick={() => setShowConnectMenu(!showConnectMenu)}
+              className={`p-1 rounded-lg transition-colors relative ${
+                isConnected ? 'text-theme-bg-accent hover:bg-theme-bg-accent/10' : 'text-white/30 hover:text-white/70 hover:bg-white/5'
+              }`}
+            >
+              <Link size={14} />
+            </button>
+
+            {showConnectMenu && (
+              <div className="absolute top-full right-0 mt-2 bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl p-1.5 min-w-[160px] z-50">
+                <div className="text-[9px] font-bold text-white/35 px-2.5 py-1.5 uppercase tracking-wider select-none">Connect to Tab</div>
+                {connectableTabs.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      handleConnect(t.id);
+                      setShowConnectMenu(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition-colors ${
+                      connectedTabId === t.id ? 'text-theme-bg-accent bg-theme-bg-accent/10 font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {t.id === '1' ? 'Home' : t.name}
+                    {connectedTabId === t.id && <span className="w-1.5 h-1.5 rounded-full bg-theme-bg-accent" />}
+                  </button>
+                ))}
+                {isConnected && (
+                  <>
+                    <div className="h-px bg-white/5 my-1 mx-2" />
+                    <button
+                      onClick={() => {
+                        connectBookmarkTab(folder.id, null);
+                        setShowConnectMenu(false);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors font-medium"
+                    >
+                      Disconnect Tab
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={`flex flex-col space-y-0.5 relative z-10 ${viewMode === 'list' ? 'flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 space-y-0' : ''}`}>

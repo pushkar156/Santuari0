@@ -60,6 +60,8 @@ interface WidgetState {
   renameBookmarkTab: (id: string, name: string) => void;
   removeBookmarkTab: (id: string) => void;
   removeRecentBackground: (background: string) => void;
+  bookmarkTabConnections?: Record<string, string>;
+  connectBookmarkTab: (folderId: string, tabId: string | null) => void;
 }
 
 // Create an adapter for Zustand's persist middleware to use our custom storage wrapper
@@ -113,6 +115,16 @@ export const useWidgetStore = create<WidgetState>()(
       removeBookmarkTab: (id) => set((state) => ({
         bookmarkTabs: state.bookmarkTabs.filter(t => t.id !== id)
       })),
+      bookmarkTabConnections: {},
+      connectBookmarkTab: (folderId, tabId) => set((state) => {
+        const connections = { ...(state.bookmarkTabConnections || {}) };
+        if (tabId) {
+          connections[folderId] = tabId;
+        } else {
+          delete connections[folderId];
+        }
+        return { bookmarkTabConnections: connections };
+      }),
 
       toggleBlur: () => set((state) => ({ isBlurred: !state.isBlurred })),
 
