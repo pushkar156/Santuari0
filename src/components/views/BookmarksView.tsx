@@ -99,6 +99,8 @@ export const BookmarksView: React.FC = () => {
 
   const [activeTabId, setActiveTabId] = useState('1');
   const [searchQuery, setSearchQuery] = useState('');
+  const [globalSort, setGlobalSort] = useState<'default' | 'alpha-asc' | 'alpha-desc' | 'count-desc' | 'recent-desc'>('default');
+  const [innerSort, setInnerSort] = useState<'default' | 'alpha' | 'date-newest' | 'date-oldest'>('default');
   const hasSyncedRef = useRef(false);
 
   // Modal State
@@ -280,6 +282,23 @@ export const BookmarksView: React.FC = () => {
   const displayFolders = useMemo(() => {
     if (!activeFolder) return [];
     
+    // Helper to find the most recent dateAdded timestamp in folder recursively
+    const getMostRecentDate = (folderNode: BookmarkNode): number => {
+      let mostRecent = folderNode.dateAdded || 0;
+      const check = (node: BookmarkNode) => {
+        if (node.dateAdded && node.dateAdded > mostRecent) {
+          mostRecent = node.dateAdded;
+        }
+        if (node.children) {
+          node.children.forEach(check);
+        }
+      };
+      check(folderNode);
+      return mostRecent;
+    };
+
+    let cards: any[] = [];
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       
@@ -307,26 +326,47 @@ export const BookmarksView: React.FC = () => {
       };
       searchFolders(tabRoot);
       
-      const cards = [];
       if (matchingBookmarks.length > 0) {
         cards.push({ id: 'search-results-bookmarks', title: 'Matching Bookmarks', children: matchingBookmarks, isMain: true });
       }
-      cards.push(...matchedFolders);
+      
+      // Sort matching folders
+      const foldersToSort = [...matchedFolders];
+      if (globalSort === 'alpha-asc') {
+        foldersToSort.sort((a, b) => a.title.localeCompare(b.title));
+      } else if (globalSort === 'alpha-desc') {
+        foldersToSort.sort((a, b) => b.title.localeCompare(a.title));
+      } else if (globalSort === 'count-desc') {
+        foldersToSort.sort((a, b) => (b.children?.length || 0) - (a.children?.length || 0));
+      } else if (globalSort === 'recent-desc') {
+        foldersToSort.sort((a, b) => getMostRecentDate(b) - getMostRecentDate(a));
+      }
+      
+      cards.push(...foldersToSort);
       return cards;
     }
     
     let childFolders = activeFolder.children?.filter(n => !n.url) || [];
     let directBookmarks = activeFolder.children?.filter(n => n.url) || [];
     
-    const cards = [];
-    
     if (directBookmarks.length > 0 && activeFolder.title) {
       cards.push({ ...activeFolder, children: directBookmarks, isMain: true });
     }
     
-    cards.push(...childFolders);
+    const foldersToSort = [...childFolders];
+    if (globalSort === 'alpha-asc') {
+      foldersToSort.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (globalSort === 'alpha-desc') {
+      foldersToSort.sort((a, b) => b.title.localeCompare(a.title));
+    } else if (globalSort === 'count-desc') {
+      foldersToSort.sort((a, b) => (b.children?.length || 0) - (a.children?.length || 0));
+    } else if (globalSort === 'recent-desc') {
+      foldersToSort.sort((a, b) => getMostRecentDate(b) - getMostRecentDate(a));
+    }
+    
+    cards.push(...foldersToSort);
     return cards;
-  }, [activeFolder, searchQuery]);
+  }, [activeFolder, searchQuery, globalSort]);
 
   const openAddModal = (type: 'bookmark' | 'folder') => {
     setModalType(type);
@@ -835,6 +875,33 @@ export const BookmarksView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4 relative">
+          {activeTabId !== 'workspaces' && (
+            <div className="flex items-center gap-2 bg-black/20 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl shadow-lg z-10">
+              <select
+                value={globalSort}
+                onChange={(e) => setGlobalSort(e.target.value as any)}
+                className="bg-transparent text-white/70 hover:text-white text-[11px] font-bold focus:outline-none cursor-pointer pr-1 border-r border-white/10 mr-1 select-none"
+              >
+                <option value="default" className="bg-[#1a1a1a] text-white">Default Cards</option>
+                <option value="alpha-asc" className="bg-[#1a1a1a] text-white">Cards A-Z</option>
+                <option value="alpha-desc" className="bg-[#1a1a1a] text-white">Cards Z-A</option>
+                <option value="count-desc" className="bg-[#1a1a1a] text-white">Cards by Size</option>
+                <option value="recent-desc" className="bg-[#1a1a1a] text-white">Cards by Recency</option>
+              </select>
+
+              <select
+                value={innerSort}
+                onChange={(e) => setInnerSort(e.target.value as any)}
+                className="bg-transparent text-white/70 hover:text-white text-[11px] font-bold focus:outline-none cursor-pointer pr-1 select-none"
+              >
+                <option value="default" className="bg-[#1a1a1a] text-white">Default Links</option>
+                <option value="alpha" className="bg-[#1a1a1a] text-white">Links A-Z</option>
+                <option value="date-newest" className="bg-[#1a1a1a] text-white">Links Newest</option>
+                <option value="date-oldest" className="bg-[#1a1a1a] text-white">Links Oldest</option>
+              </select>
+            </div>
+          )}
+
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40 group-focus-within:text-white/80 transition-colors">
               <Search size={16} />
@@ -1116,6 +1183,7 @@ export const BookmarksView: React.FC = () => {
                       }}
                       moveBookmark={moveBookmark}
                       searchQuery={searchQuery}
+                      innerSort={innerSort}
                     />
                   </motion.div>
                 ))}
@@ -1666,7 +1734,8 @@ const FolderCard = ({
   onNavigate,
   onContextMenu,
   moveBookmark,
-  searchQuery
+  searchQuery,
+  innerSort
 }: { 
   folder: BookmarkNode, 
   isBlurred: boolean,
@@ -1674,7 +1743,8 @@ const FolderCard = ({
   onNavigate: (id?: string) => void,
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void,
   moveBookmark: (id: string, destination: { parentId: string, index?: number }) => Promise<void>,
-  searchQuery?: string
+  searchQuery?: string,
+  innerSort: 'default' | 'alpha' | 'date-newest' | 'date-oldest'
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
@@ -1682,6 +1752,30 @@ const FolderCard = ({
 
   const bookmarks = folder.children?.filter(n => n.url) || [];
   const subfolders = folder.children?.filter(n => !n.url) || [];
+
+  const sortedBookmarks = useMemo(() => {
+    const copy = [...bookmarks];
+    if (innerSort === 'alpha') {
+      copy.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (innerSort === 'date-newest') {
+      copy.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+    } else if (innerSort === 'date-oldest') {
+      copy.sort((a, b) => (a.dateAdded || 0) - (b.dateAdded || 0));
+    }
+    return copy;
+  }, [bookmarks, innerSort]);
+
+  const sortedSubfolders = useMemo(() => {
+    const copy = [...subfolders];
+    if (innerSort === 'alpha') {
+      copy.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (innerSort === 'date-newest') {
+      copy.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+    } else if (innerSort === 'date-oldest') {
+      copy.sort((a, b) => (a.dateAdded || 0) - (b.dateAdded || 0));
+    }
+    return copy;
+  }, [subfolders, innerSort]);
   
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1742,7 +1836,7 @@ const FolderCard = ({
       </div>
 
       <div className={`flex flex-col space-y-0.5 relative z-10 ${viewMode === 'list' ? 'flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 space-y-0' : ''}`}>
-        {bookmarks.length === 0 && subfolders.length === 0 && (
+        {sortedBookmarks.length === 0 && sortedSubfolders.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-white/20 border border-dashed border-white/5 rounded-2xl relative z-10">
             <Bookmark size={16} className="mb-1.5 opacity-40" />
             <span className="text-[11px] font-semibold">Empty Folder</span>
@@ -1750,7 +1844,7 @@ const FolderCard = ({
           </div>
         )}
         
-        {bookmarks.slice(0, viewMode === 'list' ? 99 : 12).map(bm => (
+        {sortedBookmarks.slice(0, viewMode === 'list' ? 99 : 12).map(bm => (
           <div key={bm.id} className="relative">
             {dragOverItemId === bm.id && dropPosition && (
               <div className={`absolute left-0 right-0 h-0.5 bg-theme-bg-accent z-20 ${
@@ -1816,23 +1910,23 @@ const FolderCard = ({
           </div>
         ))}
         
-        {viewMode === 'grid' && bookmarks.length > 12 && (
+        {viewMode === 'grid' && sortedBookmarks.length > 12 && (
           <div className="px-4 py-2 mt-1 text-[11px] font-bold tracking-wider text-white/30 uppercase">
-            + {bookmarks.length - 12} more bookmarks
+            + {sortedBookmarks.length - 12} more bookmarks
           </div>
         )}
         
-        {viewMode === 'list' && bookmarks.length > 99 && (
+        {viewMode === 'list' && sortedBookmarks.length > 99 && (
           <div className="px-4 py-2 mt-1 text-[11px] font-bold tracking-wider text-white/30 uppercase">
-            + {bookmarks.length - 99} more bookmarks
+            + {sortedBookmarks.length - 99} more bookmarks
           </div>
         )}
         
-        {subfolders.length > 0 && bookmarks.length > 0 && viewMode === 'grid' && (
+        {sortedSubfolders.length > 0 && sortedBookmarks.length > 0 && viewMode === 'grid' && (
           <div className="h-px bg-white/5 my-3 mx-2" />
         )}
         
-        {subfolders.map(sub => (
+        {sortedSubfolders.map(sub => (
           <div 
             key={sub.id} 
             className="relative"
