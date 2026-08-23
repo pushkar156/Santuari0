@@ -62,6 +62,8 @@ interface WidgetState {
   removeRecentBackground: (background: string) => void;
   bookmarkTabConnections?: Record<string, string>;
   connectBookmarkTab: (folderId: string, tabId: string | null) => void;
+  collapsedFolderIds?: string[];
+  toggleFolderCollapse: (folderId: string) => void;
 }
 
 // Create an adapter for Zustand's persist middleware to use our custom storage wrapper
@@ -124,6 +126,15 @@ export const useWidgetStore = create<WidgetState>()(
           delete connections[folderId];
         }
         return { bookmarkTabConnections: connections };
+      }),
+      collapsedFolderIds: [],
+      toggleFolderCollapse: (folderId) => set((state) => {
+        const collapsed = state.collapsedFolderIds || [];
+        const isAlreadyCollapsed = collapsed.includes(folderId);
+        const nextCollapsed = isAlreadyCollapsed
+          ? collapsed.filter(id => id !== folderId)
+          : [...collapsed, folderId];
+        return { collapsedFolderIds: nextCollapsed };
       }),
 
       toggleBlur: () => set((state) => ({ isBlurred: !state.isBlurred })),

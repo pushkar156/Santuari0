@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronLeft, Edit2, Link, FolderPlus, X, List, Plus, Layers, Play, Save, ExternalLink } from 'lucide-react';
+import { Bookmark, Folder, Search, Download, LayoutGrid, Trash2, Eye, Settings, ChevronLeft, ChevronDown, Edit2, Link, FolderPlus, X, List, Plus, Layers, Play, Save, ExternalLink, MoreVertical } from 'lucide-react';
 import { useBookmarksStore, BookmarkNode } from '../../store/bookmarksStore';
 import { useWidgetStore } from '../../store/widgetStore';
 import { useViewStore } from '../../store/viewStore';
@@ -1778,11 +1778,18 @@ const FolderCard = ({
   innerSort: 'default' | 'alpha' | 'date-newest' | 'date-oldest',
   activeTabId?: string
 }) => {
-  const { bookmarkTabConnections, connectBookmarkTab, bookmarkTabs } = useWidgetStore();
+  const { 
+    bookmarkTabConnections, 
+    connectBookmarkTab, 
+    bookmarkTabs,
+    collapsedFolderIds = [],
+    toggleFolderCollapse
+  } = useWidgetStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
   const [showConnectMenu, setShowConnectMenu] = useState(false);
+  const isCollapsed = collapsedFolderIds.includes(folder.id);
 
   const bookmarks = folder.children?.filter(n => n.url) || [];
   const subfolders = folder.children?.filter(n => !n.url) || [];
@@ -1896,75 +1903,115 @@ const FolderCard = ({
         }}
       >
         <div 
-          className={`flex items-center gap-2 ${isConnected && activeTabId === '2' ? 'cursor-pointer group/title hover:opacity-80' : ''}`}
-          onClick={() => {
-            if (isConnected && activeTabId === '2') {
-              onNavigate(connectedTabId);
-            }
-          }}
+          className="flex items-center gap-2"
         >
-          <HighlightText 
-            text={folder.title} 
-            query={searchQuery} 
-            className={`text-[15px] font-semibold text-white/90 tracking-wide transition-colors ${isConnected && activeTabId === '2' ? 'group-hover/title:text-theme-bg-accent' : ''}`} 
-          />
-          {isConnected && activeTabId === '2' && (
-            <span className="text-[9px] bg-theme-bg-accent/15 text-theme-bg-accent px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
-              {connectedTabId === '1' ? 'Home' : bookmarkTabs.find(t => t.id === connectedTabId)?.name || 'Linked'}
-            </span>
-          )}
-        </div>
-
-        {activeTabId === '2' && !(folder as any).isMain && (
-          <div className="relative">
+          {!(folder as any).isMain && (
             <button
-              onClick={() => setShowConnectMenu(!showConnectMenu)}
-              className={`p-1 rounded-lg transition-colors relative ${
-                isConnected ? 'text-theme-bg-accent hover:bg-theme-bg-accent/10' : 'text-white/30 hover:text-white/70 hover:bg-white/5'
-              }`}
+              onClick={() => toggleFolderCollapse(folder.id)}
+              className="p-1 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
             >
-              <Link size={14} />
+              <ChevronDown 
+                size={14} 
+                className={`transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`} 
+              />
             </button>
+          )}
 
-            {showConnectMenu && (
-              <div className="absolute top-full right-0 mt-2 bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl p-1.5 min-w-[160px] z-50">
-                <div className="text-[9px] font-bold text-white/35 px-2.5 py-1.5 uppercase tracking-wider select-none">Connect to Tab</div>
-                {connectableTabs.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      handleConnect(t.id);
-                      setShowConnectMenu(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition-colors ${
-                      connectedTabId === t.id ? 'text-theme-bg-accent bg-theme-bg-accent/10 font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {t.id === '1' ? 'Home' : t.name}
-                    {connectedTabId === t.id && <span className="w-1.5 h-1.5 rounded-full bg-theme-bg-accent" />}
-                  </button>
-                ))}
-                {isConnected && (
-                  <>
-                    <div className="h-px bg-white/5 my-1 mx-2" />
-                    <button
-                      onClick={() => {
-                        connectBookmarkTab(folder.id, null);
-                        setShowConnectMenu(false);
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors font-medium"
-                    >
-                      Disconnect Tab
-                    </button>
-                  </>
-                )}
-              </div>
+          <div 
+            className={`flex items-center gap-2 ${isConnected && activeTabId === '2' ? 'cursor-pointer group/title hover:opacity-80' : ''}`}
+            onClick={() => {
+              if (isConnected && activeTabId === '2') {
+                onNavigate(connectedTabId);
+              }
+            }}
+          >
+            <HighlightText 
+              text={folder.title} 
+              query={searchQuery} 
+              className={`text-[15px] font-semibold text-white/90 tracking-wide transition-colors ${isConnected && activeTabId === '2' ? 'group-hover/title:text-theme-bg-accent' : ''}`} 
+            />
+            {isConnected && activeTabId === '2' && (
+              <span className="text-[9px] bg-theme-bg-accent/15 text-theme-bg-accent px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                {connectedTabId === '1' ? 'Home' : bookmarkTabs.find(t => t.id === connectedTabId)?.name || 'Linked'}
+              </span>
             )}
           </div>
-        )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {activeTabId === '2' && !(folder as any).isMain && (
+            <div className="relative">
+              <button
+                onClick={() => setShowConnectMenu(!showConnectMenu)}
+                className={`p-1 rounded-lg transition-colors relative ${
+                  isConnected ? 'text-theme-bg-accent hover:bg-theme-bg-accent/10' : 'text-white/30 hover:text-white/70 hover:bg-white/5'
+                }`}
+              >
+                <Link size={14} />
+              </button>
+
+              {showConnectMenu && (
+                <div className="absolute top-full right-0 mt-2 bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl p-1.5 min-w-[160px] z-50">
+                  <div className="text-[9px] font-bold text-white/35 px-2.5 py-1.5 uppercase tracking-wider select-none">Connect to Tab</div>
+                  {connectableTabs.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        handleConnect(t.id);
+                        setShowConnectMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition-colors ${
+                        connectedTabId === t.id ? 'text-theme-bg-accent bg-theme-bg-accent/10 font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {t.id === '1' ? 'Home' : t.name}
+                      {connectedTabId === t.id && <span className="w-1.5 h-1.5 rounded-full bg-theme-bg-accent" />}
+                    </button>
+                  ))}
+                  {isConnected && (
+                    <>
+                      <div className="h-px bg-white/5 my-1 mx-2" />
+                      <button
+                        onClick={() => {
+                          connectBookmarkTab(folder.id, null);
+                          setShowConnectMenu(false);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors font-medium"
+                      >
+                        Disconnect Tab
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!(folder as any).isMain && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = Math.min(rect.left, window.innerWidth - 220);
+                const y = Math.min(rect.bottom + 8, window.innerHeight - 250);
+                onContextMenu({ clientX: x, clientY: y, preventDefault: () => {} } as any, folder);
+              }}
+              className="p-1 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+            >
+              <MoreVertical size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className={`flex flex-col space-y-0.5 relative z-10 ${viewMode === 'list' ? 'flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 space-y-0' : ''}`}>
+      <motion.div 
+        initial={false}
+        animate={{ height: isCollapsed ? 0 : 'auto', opacity: isCollapsed ? 0 : 1 }}
+        transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+        className="overflow-hidden"
+      >
+        <div className={`flex flex-col space-y-0.5 relative z-10 ${viewMode === 'list' ? 'flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 space-y-0' : ''}`}>
         {sortedBookmarks.length === 0 && sortedSubfolders.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-white/20 border border-dashed border-white/5 rounded-2xl relative z-10">
             <Bookmark size={16} className="mb-1.5 opacity-40" />
@@ -2122,6 +2169,7 @@ const FolderCard = ({
           </div>
         ))}
       </div>
+      </motion.div>
     </div>
   );
 };
